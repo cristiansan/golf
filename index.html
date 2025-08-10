@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Registro Golf - Mobile</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Registro de Practicantes de Golf</h1>
+
+      <div class="tabs">
+        <button class="tab-button active" data-tab="personales">Datos Personales</button>
+        <button class="tab-button" data-tab="medica">Información Médica</button>
+        <button class="tab-button" data-tab="experiencia">Experiencia en Golf</button>
+      </div>
+
+      <form id="registroForm" class="form">
+        <section class="tab-content active" id="tab-personales">
+          <label>Nombre y Apellido
+            <input name="nombreApellido" required placeholder="Nombre y Apellido" />
+          </label>
+          <div class="row">
+            <label>Fecha de Nacimiento
+              <input type="date" name="fechaNacimiento" />
+            </label>
+            <label>Edad
+              <input type="number" name="edad" min="0" inputmode="numeric" readonly placeholder="Se calcula automáticamente" />
+            </label>
+          </div>
+          <label>Domicilio
+            <input name="domicilio" placeholder="Dirección" />
+          </label>
+          <label>Teléfono
+            <input name="telefono" placeholder="Teléfono" inputmode="tel" />
+          </label>
+          <label>Email
+            <input type="email" name="email" placeholder="email@dominio.com" />
+          </label>
+          <label>Padre/Madre/Tutor (si es menor)
+            <input name="tutor" />
+          </label>
+          <label>Teléfono de Emergencia
+            <input name="telefonoEmergencia" inputmode="tel" />
+          </label>
+          <label>Nacionalidad
+            <input name="nacionalidad" />
+          </label>
+          <label>Profesión / Ocupación
+            <input name="ocupacion" />
+          </label>
+        </section>
+
+        <section class="tab-content" id="tab-medica">
+          <label>Alergias
+            <input name="alergias" />
+          </label>
+          <label>Lesiones o cirugías previas
+            <input name="lesionesCirugias" />
+          </label>
+          <label>Condición médica a tener en cuenta
+            <input name="condicionMedica" />
+          </label>
+          <fieldset class="inline">
+            <legend>Apto médico</legend>
+            <label class="chip"><input type="radio" name="aptoMedico" value="si" checked /> Sí</label>
+            <label class="chip"><input type="radio" name="aptoMedico" value="no" /> No</label>
+          </fieldset>
+          <label>Fecha de vencimiento del apto
+            <input type="date" name="aptoVencimiento" />
+          </label>
+          <label>Adjuntar apto (PDF/imagen, máx 2 MB)
+            <input type="file" name="aptoArchivo" accept="application/pdf,image/*" />
+          </label>
+        </section>
+
+        <section class="tab-content" id="tab-experiencia">
+          <label>Años practicando
+            <input type="number" name="aniosPracticando" min="0" inputmode="numeric" />
+          </label>
+          <label>Hándicap actual
+            <input name="handicap" />
+          </label>
+          <label>Club o cancha de pertenencia
+            <input name="club" />
+          </label>
+          <label>Frecuencia de juego semanal (veces/semana)
+            <input type="number" name="frecuenciaSemanal" min="0" inputmode="numeric" />
+          </label>
+          <fieldset>
+            <legend>Modalidad de juego favorita</legend>
+            <label class="chip"><input type="radio" name="modalidadFavorita" value="Medal Play" checked /> Medal Play</label>
+            <label class="chip"><input type="radio" name="modalidadFavorita" value="Match Play" /> Match Play</label>
+            <label class="chip">
+              <input type="radio" name="modalidadFavorita" value="Otro" /> Otro
+            </label>
+            <input name="modalidadFavoritaOtro" placeholder="Especificar si elige Otro" />
+          </fieldset>
+          <fieldset class="inline">
+            <legend>Clases previas</legend>
+            <label class="chip"><input type="radio" name="clasesPrevias" value="si" /> Sí</label>
+            <label class="chip"><input type="radio" name="clasesPrevias" value="no" checked /> No</label>
+          </fieldset>
+        </section>
+
+        <div class="actions">
+          <button type="button" id="prevBtn">Anterior</button>
+          <button type="button" id="nextBtn">Siguiente</button>
+          <button type="submit" id="submitBtn" class="primary">Guardar</button>
+        </div>
+      </form>
+
+      <section class="listado">
+        <h2>Últimos registros</h2>
+        <ul id="listaPersonas"></ul>
+      </section>
+    </main>
+    <script src="./main.js"></script>
+  </body>
+  </html>
+
+
