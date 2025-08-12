@@ -19,6 +19,50 @@ body {
   color: var(--text);
 }
 
+.card-surface {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #052e16;
+  border: 1px solid transparent;
+}
+.btn-primary:hover { background: var(--primary-600); }
+
+.input-base, .select-base, .textarea-base {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: var(--text);
+}
+.muted { color: var(--muted); }
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0c1424;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.divider { border-top: 1px solid var(--border); }
+
 .container {
   max-width: 720px;
   margin: 0 auto;
