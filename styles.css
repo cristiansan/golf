@@ -63,8 +63,14 @@ body {
 
 .divider { border-top: 1px solid var(--border); }
 
+/* Asegurar tamaño consistente de íconos Lucide */
+.lucide { width: 20px; height: 20px; }
+
+/* Evitar que el título "Golf App" se corte en dos líneas */
+.nav-title { white-space: nowrap; }
+
 .container {
-  max-width: 720px;
+  max-width: 1024px;
   margin: 0 auto;
   padding: 16px clamp(16px, 3vw, 24px) 56px;
 }
@@ -108,8 +114,16 @@ label {
   gap: 6px;
   font-size: 0.9rem;
 }
-input, select, button {
+input, select {
   width: 100%;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: var(--text);
+}
+button {
+  width: auto;
   padding: 12px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
