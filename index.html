@@ -8,9 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="./vendor/qrcode.min.js?v=1"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <link rel="stylesheet" href="./styles.css?v=2" />
     <style>
       .nav-title { letter-spacing: 0.2px; }
@@ -45,6 +45,9 @@
           <div class="text-xs muted mb-2 text-center">Luciano Sancho Golf</div>
           <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-full block opacity-90" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
+          <div class="mt-2 text-center">
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.2</button>
+          </div>
         </div>
       </div>
     </div>
@@ -164,19 +167,16 @@
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Links (YouTube)</h2>
         </div>
-        <div class="grid md:grid-cols-[1fr_auto] gap-2 mb-3">
-          <input id="yt-url" class="input-base" placeholder="Pegar URL de YouTube (https://...)" />
-          <button id="btn-add-link" class="px-3 py-2 rounded-md btn-primary btn">Añadir</button>
-        </div>
-        <div class="grid md:grid-cols-3 gap-2 mb-3">
-          <input id="links-search" class="input-base" placeholder="Buscar…" />
-          <select id="links-tag" class="select-base">
-            <option value="">Todas las etiquetas</option>
-          </select>
-          <select id="links-order" class="select-base">
-            <option value="date_desc">Más recientes</option>
-            <option value="date_asc">Más antiguos</option>
-          </select>
+        <div class="grid gap-2 mb-3">
+          <label class="field">Nombre
+            <input id="yt-title" class="input-base" placeholder="Nombre del video" />
+          </label>
+          <label class="field">Link
+            <input id="yt-url" class="input-base" placeholder="Pegar URL (https://...)" />
+          </label>
+          <div>
+            <button id="btn-add-link" class="px-3 py-2 rounded-md btn-primary btn">Añadir</button>
+          </div>
         </div>
         <div id="links-grid" class="grid-cards"></div>
       </section>
@@ -202,7 +202,39 @@
       </section>
     </main>
 
-    <script defer src="./main.js?v=1"></script>
+    <!-- Modal: Changelog -->
+    <div id="modal-changelog" class="fixed inset-0 z-50 hidden">
+      <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
+      <div class="relative max-w-lg mx-auto mt-24 bg-[#0f172a] border rounded-lg p-4" style="border-color: var(--border)">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold">Notas de versión</h3>
+          <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
+        </div>
+        <div class="text-sm space-y-4">
+          <div>
+            <div class="font-medium mb-1">v0.2</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Links: formulario simplificado (Nombre, Link y botón Añadir).</li>
+              <li>Listado en una sola columna; muestra título arriba de la miniatura (ya no editable).</li>
+              <li>Seguridad: clave requerida para Añadir; propietario almacenado por hash.</li>
+              <li>Borrado protegido: pide clave y valida contra propietario/administrador.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-medium mb-1">v0.1</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Estilos migrados a <code>styles.css</code> y corrección de rutas para GitHub Pages.</li>
+              <li>Unificación del botón de menú con icono que alterna entre hamburguesa y X; posición a la derecha.</li>
+              <li>Ajustes de espaciado del menú lateral y pie centrado.</li>
+              <li>Separación del JS a <code>main.js</code>.</li>
+              <li>Generador de QR simplificado (tamaño fijo) con fallback y librería local.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="./main.js?v=4"></script>
   </body>
   </html>
 
