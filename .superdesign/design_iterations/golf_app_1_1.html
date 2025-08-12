@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Golf App — Formulario, Links y QR</title>
+    <title>Golf App v1 — Hamb. derecha + logo en menú</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <link rel="stylesheet" href=".superdesign/design_iterations/golf_app_theme_1.css" />
+    <link rel="stylesheet" href="./golf_app_theme_1.css" />
     <style>
       .nav-title { letter-spacing: 0.2px; }
       .tab-btn[aria-selected="true"] { outline: 1px solid var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
@@ -21,25 +21,27 @@
       .field { display: grid; gap: 6px; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       .fade-in { animation: fadeIn 220ms ease-out both; }
-      .btn { transition: transform .12s ease-out, opacity .12s ease-out; }
-      .btn:active { transform: scale(0.98); }
+      button { transition: transform .12s ease-out, opacity .12s ease-out; }
+      button:active { transform: scale(0.98); }
     </style>
   </head>
   <body class="min-h-screen">
+    <!-- Top bar: hamburguesa a la derecha -->
     <header class="sticky top-0 z-50 border-b" style="border-color: var(--border)">
       <div class="container flex items-center gap-3 py-3">
         <h1 class="text-lg font-semibold nav-title">Golf App</h1>
-        <button class="ml-auto p-2 rounded-md border btn" style="border-color: var(--border)" data-drawer-target="app-drawer" data-drawer-show="app-drawer" data-drawer-placement="right" aria-controls="app-drawer" aria-label="Abrir menú">
+        <button class="ml-auto p-2 rounded-md border" style="border-color: var(--border)" data-drawer-target="app-drawer" data-drawer-show="app-drawer" data-drawer-placement="right" aria-controls="app-drawer" aria-label="Abrir menú">
           <i data-lucide="menu"></i>
         </button>
       </div>
     </header>
 
+    <!-- Drawer con logo al pie -->
     <div id="app-drawer" data-drawer-placement="right" class="fixed top-0 right-0 z-40 h-screen w-64 translate-x-full transition-transform drawer-surface" tabindex="-1" aria-labelledby="app-drawer-label">
       <div class="relative min-h-screen pb-24 flex flex-col">
         <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--border)">
           <span id="app-drawer-label" class="font-medium">Menú</span>
-          <button data-drawer-hide="app-drawer" aria-controls="app-drawer" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
+          <button data-drawer-hide="app-drawer" aria-controls="app-drawer" class="p-2 rounded-md border" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         <nav class="p-2 space-y-1">
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="formulario">Formulario</button>
@@ -48,12 +50,15 @@
         </nav>
         <div class="absolute bottom-0 left-0 right-0 px-4 py-3 border-t" style="border-color: var(--border)">
           <div class="text-xs muted mb-2">Luciano Sancho Golf</div>
-          <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-full block opacity-90" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
-          <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
+          <img id="drawer-logo" src="../../logo.jpeg" alt="Logo" class="w-full block opacity-90" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
+          <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-full aspect-square rounded-full border" style="border-color: var(--border); background:#000; color:#fff">
+            <span class="text-xs">LS Golf</span>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Main content: igual que v1 base -->
     <main class="container grid gap-6 py-4">
       <section id="sec-formulario" class="card-surface">
         <div class="flex items-center justify-between mb-2">
@@ -156,22 +161,21 @@
             </label>
           </div>
           <div class="flex items-center justify-between pt-2 border-t" style="border-color: var(--border)">
-            <button type="button" id="btn-prev" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Anterior</button>
+            <button type="button" id="btn-prev" class="px-3 py-2 rounded-md border" style="border-color: var(--border)">Anterior</button>
             <div class="flex gap-2">
-              <button type="button" id="btn-next" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Siguiente</button>
-              <button type="submit" class="px-3 py-2 rounded-md btn-primary btn">Guardar</button>
+              <button type="button" id="btn-next" class="px-3 py-2 rounded-md border" style="border-color: var(--border)">Siguiente</button>
+              <button type="submit" class="px-3 py-2 rounded-md btn-primary">Guardar</button>
             </div>
           </div>
         </form>
       </section>
-
       <section id="sec-links" class="card-surface hidden">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Links (YouTube)</h2>
         </div>
         <div class="grid md:grid-cols-[1fr_auto] gap-2 mb-3">
           <input id="yt-url" class="input-base" placeholder="Pegar URL de YouTube (https://...)" />
-          <button id="btn-add-link" class="px-3 py-2 rounded-md btn-primary btn">Añadir</button>
+          <button id="btn-add-link" class="px-3 py-2 rounded-md btn-primary">Añadir</button>
         </div>
         <div class="grid md:grid-cols-3 gap-2 mb-3">
           <input id="links-search" class="input-base" placeholder="Buscar…" />
@@ -185,7 +189,6 @@
         </div>
         <div id="links-grid" class="grid-cards"></div>
       </section>
-
       <section id="sec-qr" class="card-surface hidden">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Generador de QR</h2>
@@ -204,9 +207,9 @@
               </label>
             </div>
             <div class="flex gap-2">
-              <button id="btn-gen-qr" class="px-3 py-2 rounded-md btn-primary btn">Generar</button>
-              <button id="btn-dl-png" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Descargar PNG</button>
-              <button id="btn-dl-svg" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Descargar SVG</button>
+              <button id="btn-gen-qr" class="px-3 py-2 rounded-md btn-primary">Generar</button>
+              <button id="btn-dl-png" class="px-3 py-2 rounded-md border" style="border-color: var(--border)">Descargar PNG</button>
+              <button id="btn-dl-svg" class="px-3 py-2 rounded-md border" style="border-color: var(--border)">Descargar SVG</button>
             </div>
           </div>
           <div class="grid place-items-center">
@@ -219,89 +222,64 @@
     <script>
       document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons(); });
       const sections = { formulario: sec('formulario'), links: sec('links'), qr: sec('qr') };
-      function sec(id){ return document.getElementById('sec-' + id); }
-      function switchTo(target){ Object.keys(sections).forEach(k => sections[k].classList.toggle('hidden', k!==target)); const active = sections[target]; if (active) { active.classList.remove('fade-in'); void active.offsetWidth; active.classList.add('fade-in'); } closeDrawer(); }
+      document.querySelectorAll('#app-drawer [data-section]').forEach(btn => btn.addEventListener('click', () => { switchTo(btn.getAttribute('data-section')); }));
       const navEl = document.querySelector('#app-drawer nav');
       navEl?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-section]');
         if (!btn) return;
         const target = btn.getAttribute('data-section');
         switchTo(target);
-        closeDrawer();
+        drawerEl.classList.add('translate-x-full');
+        updateHamburgerVisibility();
       });
-      // Redundancia: listeners directos por si falla la delegación
       document.querySelectorAll('#app-drawer [data-section]')
-        .forEach(b => b.addEventListener('click', () => { closeDrawer(); }));
-
-      // Drawer controls + ocultar hamburguesa cuando está abierto
-      const drawerEl = document.getElementById('app-drawer');
-      const hamburgerBtn = document.querySelector('header [data-drawer-target="app-drawer"]');
-      const openBtn = document.querySelector('header [data-drawer-show][data-drawer-target="app-drawer"]');
-      const closeBtn = document.querySelector('#app-drawer [data-drawer-hide="app-drawer"]');
-      function updateHamburgerVisibility(){ const isOpen = !drawerEl.classList.contains('translate-x-full'); if (hamburgerBtn) hamburgerBtn.style.visibility = isOpen ? 'hidden' : 'visible'; }
-      function openDrawer(){ drawerEl.classList.remove('translate-x-full'); updateHamburgerVisibility(); }
-      function closeDrawer(){ drawerEl.classList.add('translate-x-full'); updateHamburgerVisibility(); }
-      openBtn?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); openDrawer(); });
-      closeBtn?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeDrawer(); });
-      // También cerrar con Escape
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
-      const mo = new MutationObserver(updateHamburgerVisibility); mo.observe(drawerEl, { attributes: true, attributeFilter: ['class'] }); updateHamburgerVisibility();
-
-      // Tabs con animación
+        .forEach(b => b.addEventListener('click', () => { drawerEl.classList.add('translate-x-full'); updateHamburgerVisibility(); }));
+      function sec(id){ return document.getElementById('sec-' + id); }
+      function switchTo(target){
+        Object.keys(sections).forEach(k => sections[k].classList.toggle('hidden', k!==target));
+        const active = sections[target];
+        if (active) { active.classList.remove('fade-in'); void active.offsetWidth; active.classList.add('fade-in'); }
+        // cerrar drawer (manual)
+        const d = document.getElementById('app-drawer');
+        d?.classList.add('translate-x-full');
+      }
+      // Tabs
       const tabs = ['tab-personales','tab-medica','tab-experiencia']; let currentTabIndex = 0;
-      function showTab(i){ currentTabIndex = Math.max(0, Math.min(tabs.length-1, i)); tabs.forEach((id,idx)=>{ document.getElementById(id).classList.toggle('hidden', idx!==currentTabIndex) }); document.querySelectorAll('.tab-btn').forEach((b,idx)=>b.setAttribute('aria-selected', String(idx===currentTabIndex))); const shown=document.getElementById(tabs[currentTabIndex]); if (shown) { shown.classList.remove('fade-in'); void shown.offsetWidth; shown.classList.add('fade-in'); } }
+      function showTab(i){ currentTabIndex = Math.max(0, Math.min(tabs.length-1, i)); tabs.forEach((id,idx)=>{ document.getElementById(id).classList.toggle('hidden', idx!==currentTabIndex) }); document.querySelectorAll('.tab-btn').forEach((b,idx)=>b.setAttribute('aria-selected', String(idx===currentTabIndex))); }
       document.querySelectorAll('.tab-btn').forEach((b,i)=>b.addEventListener('click',()=>showTab(i)));
       document.getElementById('btn-prev').addEventListener('click',()=>showTab(currentTabIndex-1));
       document.getElementById('btn-next').addEventListener('click',()=>showTab(currentTabIndex+1));
       showTab(0);
-
-      // Links YouTube
+      document.getElementById('form-registro').addEventListener('submit',e=>{ e.preventDefault(); alert('Guardado (demo)'); });
+      // Links
       const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
       const elGrid = document.getElementById('links-grid'), elSearch = document.getElementById('links-search'), elTag = document.getElementById('links-tag'), elOrder = document.getElementById('links-order');
-      function youtubeId(url){ try{ const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1); if(u.searchParams.get('v')) return u.searchParams.get('v'); const p=u.pathname.split('/'); const i=p.indexOf('embed'); if(i>=0&&p[i+1]) return p[i+1]; return ''; } catch { return ''; } }
-      function renderLinks(){ let items=[...state.links]; const q=elSearch.value.trim().toLowerCase(); if(q) items = items.filter(it => (it.title||'').toLowerCase().includes(q) || (it.url||'').toLowerCase().includes(q)); const tag=elTag.value; if(tag) items = items.filter(it => (it.tags||[]).includes(tag)); if(elOrder.value==='date_desc') items.sort((a,b)=>b.createdAt-a.createdAt); else items.sort((a,b)=>a.createdAt-b.createdAt); const tags=new Set(items.flatMap(it=>it.tags||[])); const prev=elTag.value; elTag.innerHTML='<option value="">Todas las etiquetas</option>'+[...tags].map(t=>`<option ${t===prev?'selected':''} value="${t}">${t}</option>`).join(''); elGrid.innerHTML = items.map(it=>{ const id=youtubeId(it.url); const thumb=id?`https://img.youtube.com/vi/${id}/hqdefault.jpg`:''; return `<article class=\"link-card fade-in\"><img class=\"thumb mb-2\" src=\"${thumb}\" alt=\"${it.title||'Video'}\"/><div class=\"flex items-start justify-between gap-3\"><div class=\"min-w-0\"><div class=\"font-medium truncate\">${it.title||'Video de YouTube'}</div><div class=\"text-sm muted truncate\">${new URL(it.url).hostname}</div>${it.tags?.length?`<div class=\"mt-1\">${it.tags.map(t=>`<span class=\"chip\">${t}</span>`).join(' ')}</div>`:''}</div><div class=\"shrink-0 flex gap-2\"><button class=\"p-2 rounded-md border btn\" style=\"border-color: var(--border)\" data-act=\"open\" data-id=\"${it.id}\" title=\"Abrir\"><i data-lucide=\"external-link\"></i></button><button class=\"p-2 rounded-md border btn\" style=\"border-color: var(--border)\" data-act=\"copy\" data-id=\"${it.id}\" title=\"Copiar URL\"><i data-lucide=\"copy\"></i></button><button class=\"p-2 rounded-md border btn\" style=\"border-color: var(--border)\" data-act=\"del\" data-id=\"${it.id}\" title=\"Eliminar\"><i data-lucide=\"trash-2\"></i></button></div></div></article>`; }).join(''); window.lucide?.createIcons(); elGrid.querySelectorAll('button[data-act]').forEach(btn=>{ const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const item=state.links.find(x=>String(x.id)===String(id)); if(!item) return; btn.addEventListener('click', async()=>{ if(act==='open') window.open(item.url,'_blank'); if(act==='copy') await navigator.clipboard.writeText(item.url); if(act==='del'){ state.links=state.links.filter(x=>x.id!==item.id); localStorage.setItem('yt_links', JSON.stringify(state.links)); renderLinks(); } }); }); }
+      function youtubeId(url){ try{ const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1); if(u.searchParams.get('v')) return u.searchParams.get('v'); const p=u.pathname.split('/'); const i=p.indexOf('embed'); if(i>=0&&p[i+1]) return p[i+1]; return ''; } catch{ return ''; } }
+      function renderLinks(){ let items=[...state.links]; const q=elSearch.value.trim().toLowerCase(); if(q) items = items.filter(it => (it.title||'').toLowerCase().includes(q) || (it.url||'').toLowerCase().includes(q)); const tag=elTag.value; if(tag) items = items.filter(it => (it.tags||[]).includes(tag)); if(elOrder.value==='date_desc') items.sort((a,b)=>b.createdAt-a.createdAt); else items.sort((a,b)=>a.createdAt-b.createdAt); const tags=new Set(items.flatMap(it=>it.tags||[])); const prev=elTag.value; elTag.innerHTML='<option value="">Todas las etiquetas</option>'+[...tags].map(t=>`<option ${t===prev?'selected':''} value="${t}">${t}</option>`).join(''); elGrid.innerHTML = items.map(it=>{ const id=youtubeId(it.url); const thumb=id?`https://img.youtube.com/vi/${id}/hqdefault.jpg`:''; return `<article class=\"link-card fade-in\"><img class=\"thumb mb-2\" src=\"${thumb}\" alt=\"${it.title||'Video'}\"/><div class=\"flex items-start justify-between gap-3\"><div class=\"min-w-0\"><div class=\"font-medium truncate\">${it.title||'Video de YouTube'}</div><div class=\"text-sm muted truncate\">${new URL(it.url).hostname}</div>${it.tags?.length?`<div class=\"mt-1\">${it.tags.map(t=>`<span class=\"chip\">${t}</span>`).join(' ')}</div>`:''}</div><div class=\"shrink-0 flex gap-2\"><button class=\"p-2 rounded-md border\" style=\"border-color: var(--border)\" data-act=\"open\" data-id=\"${it.id}\" title=\"Abrir\"><i data-lucide=\"external-link\"></i></button><button class=\"p-2 rounded-md border\" style=\"border-color: var(--border)\" data-act=\"copy\" data-id=\"${it.id}\" title=\"Copiar URL\"><i data-lucide=\"copy\"></i></button><button class=\"p-2 rounded-md border\" style=\"border-color: var(--border)\" data-act=\"del\" data-id=\"${it.id}\" title=\"Eliminar\"><i data-lucide=\"trash-2\"></i></button></div></div></article>`; }).join(''); window.lucide?.createIcons(); elGrid.querySelectorAll('button[data-act]').forEach(btn=>{ const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act'); const item=state.links.find(x=>String(x.id)===String(id)); if(!item) return; btn.addEventListener('click', async()=>{ if(act==='open') window.open(item.url,'_blank'); if(act==='copy') await navigator.clipboard.writeText(item.url); if(act==='del'){ state.links=state.links.filter(x=>x.id!==item.id); localStorage.setItem('yt_links', JSON.stringify(state.links)); renderLinks(); } }); }); }
       document.getElementById('btn-add-link').addEventListener('click', async()=>{ const url=document.getElementById('yt-url').value.trim(); const id=youtubeId(url); if(!id){ alert('URL de YouTube inválida'); return; } state.links.unshift({ id: Date.now(), url, title:'', tags:[], createdAt: Date.now() }); localStorage.setItem('yt_links', JSON.stringify(state.links)); document.getElementById('yt-url').value=''; renderLinks(); });
       elSearch.addEventListener('input', renderLinks); elTag.addEventListener('change', renderLinks); elOrder.addEventListener('change', renderLinks); renderLinks();
-
       // QR
-      const qrCanvas=document.getElementById('qr-canvas');
-      function ensureQRCode(){
-        return new Promise((resolve)=>{
-          if (window.QRCode) return resolve();
-          const startedAt = Date.now();
-          const check = () => {
-            if (window.QRCode) return resolve();
-            if (Date.now() - startedAt > 4000) {
-              const s = document.createElement('script');
-              s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-              s.onload = () => resolve();
-              document.head.appendChild(s);
-              return;
-            }
-            requestAnimationFrame(check);
-          };
-          check();
-        });
-      }
-      function qrToCanvas(canvas, text, opts){
-        return new Promise((resolve, reject)=>{
-          try { QRCode.toCanvas(canvas, text, opts, (err)=>{ if (err) reject(err); else resolve(); }); }
-          catch(e){ reject(e); }
-        });
-      }
-      async function drawQR(){
-        await ensureQRCode();
-        const text=document.getElementById('qr-url').value.trim();
-        const size=parseInt(document.getElementById('qr-size').value||'256',10);
-        const margin=parseInt(document.getElementById('qr-margin').value||'2',10);
-        qrCanvas.width=size; qrCanvas.height=size;
-        try { await qrToCanvas(qrCanvas, text, { width:size, margin, color:{ dark:'#e5e7eb', light:'#0b1020' } }); }
-        catch(err){ console.error('QR error', err); }
-      }
+      const qrCanvas=document.getElementById('qr-canvas'); async function drawQR(){ const text=document.getElementById('qr-url').value.trim(); const size=parseInt(document.getElementById('qr-size').value||'256',10); const margin=parseInt(document.getElementById('qr-margin').value||'2',10); qrCanvas.width=size; qrCanvas.height=size; await QRCode.toCanvas(qrCanvas, text, { width:size, margin, color:{ dark:'#e5e7eb', light:'#0b1020' } }); }
       document.getElementById('btn-gen-qr').addEventListener('click', drawQR);
       document.getElementById('btn-dl-png').addEventListener('click', async()=>{ await drawQR(); const url=qrCanvas.toDataURL('image/png'); const a=document.createElement('a'); a.href=url; a.download='qr.png'; a.click(); });
       document.getElementById('btn-dl-svg').addEventListener('click', async()=>{ const text=document.getElementById('qr-url').value.trim(); const size=parseInt(document.getElementById('qr-size').value||'256',10); const margin=parseInt(document.getElementById('qr-margin').value||'2',10); const svg=await QRCode.toString(text, { type:'svg', width:size, margin, color:{ dark:'#e5e7eb', light:'#0b1020' } }); const blob=new Blob([svg], { type:'image/svg+xml' }); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='qr.svg'; a.click(); URL.revokeObjectURL(url); });
-      window.addEventListener('load', () => { drawQR(); });
+      drawQR();
+
+      // Drawer controls + ocultar hamburguesa cuando está abierto
+      const hamburgerBtn = document.querySelector('header [data-drawer-target="app-drawer"]');
+      const drawerEl = document.getElementById('app-drawer');
+      const updateHamburgerVisibility = () => {
+        const isOpen = !drawerEl.classList.contains('translate-x-full');
+        if (hamburgerBtn) hamburgerBtn.style.visibility = isOpen ? 'hidden' : 'visible';
+      };
+      const mo = new MutationObserver(updateHamburgerVisibility);
+      mo.observe(drawerEl, { attributes: true, attributeFilter: ['class'] });
+      updateHamburgerVisibility();
+      const openBtn = document.querySelector('header [data-drawer-show][data-drawer-target="app-drawer"]');
+      const closeBtn = document.querySelector('#app-drawer [data-drawer-hide="app-drawer"]');
+      openBtn?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); drawerEl.classList.remove('translate-x-full'); updateHamburgerVisibility(); });
+      closeBtn?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); drawerEl.classList.add('translate-x-full'); updateHamburgerVisibility(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { drawerEl.classList.add('translate-x-full'); updateHamburgerVisibility(); } });
     </script>
   </body>
   </html>
