@@ -46,7 +46,7 @@
           <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-full block opacity-90" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.2</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.3</button>
           </div>
         </div>
       </div>
@@ -64,18 +64,28 @@
         </div>
         <form id="form-registro" class="grid gap-4">
           <div id="tab-personales" class="grid gap-3">
-            <div class="grid md:grid-cols-2 gap-3">
-              <label class="field">Nombre y Apellido
+            <div class="grid md:grid-cols-3 gap-3">
+              <label class="field md:col-span-2">Nombre y Apellido
                 <input class="input-base" name="nombre" required placeholder="Nombre completo" />
               </label>
-              <label class="field">Fecha de Nacimiento
-                <input class="input-base" type="date" name="nacimiento" required />
-              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="field">Fecha de Nacimiento
+                  <input class="input-base" type="date" name="nacimiento" required />
+                </label>
+                <label class="field justify-self-end text-right">Edad
+                  <input class="input-base" id="edad" name="edad" placeholder="-" readonly maxlength="2" inputmode="numeric" style="width: 56px; text-align: right;" />
+                </label>
+              </div>
             </div>
             <div class="grid md:grid-cols-2 gap-3">
-              <label class="field">Domicilio
-                <input class="input-base" name="domicilio" placeholder="Calle y número" />
-              </label>
+              <div class="grid gap-3">
+                <label class="field">Domicilio
+                  <input class="input-base" name="domicilio" placeholder="Calle y número" />
+                </label>
+                <label class="field">Ciudad
+                  <input class="input-base" name="ciudad" placeholder="Ciudad" />
+                </label>
+              </div>
               <label class="field">Nacionalidad
                 <input class="input-base" name="nacionalidad" placeholder="País" />
               </label>
@@ -211,6 +221,14 @@
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         <div class="text-sm space-y-4">
+          <div>
+            <div class="font-medium mb-1">v0.3</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Formulario: edad auto al lado de la fecha de nacimiento.</li>
+              <li>Edad compacta (máx. 2 dígitos) y alineada a la derecha.</li>
+              <li>Campo “Ciudad” agregado debajo de “Domicilio”.</li>
+            </ul>
+          </div>
           <div>
             <div class="font-medium mb-1">v0.2</div>
             <ul class="list-disc pl-5 space-y-1">

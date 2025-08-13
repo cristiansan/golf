@@ -66,6 +66,27 @@ document.getElementById('btn-prev').addEventListener('click',()=>showTab(current
 document.getElementById('btn-next').addEventListener('click',()=>showTab(currentTabIndex+1));
 showTab(0);
 
+// Edad auto en base a nacimiento
+(function initEdad(){
+  const inp = document.querySelector('input[name="nacimiento"]');
+  const out = document.getElementById('edad');
+  if (!inp || !out) return;
+  function calc(d){
+    if (!d) return '';
+    const dob = new Date(d);
+    if (isNaN(dob.getTime())) return '';
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age >= 0 ? String(age) : '';
+  }
+  const update = () => { out.value = calc(inp.value); };
+  inp.addEventListener('input', update);
+  inp.addEventListener('change', update);
+  update();
+})();
+
 // Links YouTube
 const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
 const elGrid = document.getElementById('links-grid');
