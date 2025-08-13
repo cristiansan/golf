@@ -1,6 +1,40 @@
 // Inicialización de iconos Lucide
 document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons(); console.log('[app] DOMContentLoaded'); });
 
+// Firebase (ESM)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyCSbupnAd-CH5aCi9b5CvILnIIE74D5M34',
+  authDomain: 'golf-f3b84.firebaseapp.com',
+  projectId: 'golf-f3b84',
+  storageBucket: 'golf-f3b84.appspot.com',
+  messagingSenderId: '179642241287',
+  appId: '1:179642241287:web:c43bdb3d2a1dd37e95b5a2',
+  measurementId: 'G-TXFF1RSFEG'
+};
+
+const fbApp = initializeApp(firebaseConfig);
+try { getAnalytics(fbApp); } catch(e) { console.warn('[firebase] analytics no disponible', e?.message||e); }
+const db = getFirestore(fbApp);
+const storage = getStorage(fbApp);
+const auth = getAuth(fbApp);
+
+async function ensureAuth() {
+  try {
+    if (auth.currentUser) return auth.currentUser;
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (e) {
+    console.warn('[firebase] error autenticando anónimo', e);
+    return null;
+  }
+}
+
 // Helpers de secciones
 const sections = { formulario: sec('formulario'), links: sec('links'), qr: sec('qr') };
 function sec(id){ return document.getElementById('sec-' + id); }
@@ -85,6 +119,31 @@ showTab(0);
   inp.addEventListener('input', update);
   inp.addEventListener('change', update);
   update();
+})();
+
+// Mostrar input libre cuando la modalidad es "Otro"
+(function initModalidadOtro(){
+  const select = document.querySelector('select[name="modalidad"]');
+  const row = document.getElementById('modalidad-otro-row');
+  if (!select || !row) return;
+  function sync(){
+    const isOther = (select.value || '').toLowerCase() === 'otro';
+    row.classList.toggle('hidden', !isOther);
+  }
+  select.addEventListener('change', sync);
+  sync();
+})();
+
+// Actualiza la leyenda del input de archivo de apto médico
+(function initAptoFileLabel(){
+  const fileInput = document.getElementById('apto_file');
+  const fileNameEl = document.getElementById('apto_file_name');
+  if (!fileInput || !fileNameEl) return;
+  const update = () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileNameEl.textContent = file ? file.name : 'Seleccionar Archivo';
+  };
+  fileInput.addEventListener('change', update);
 })();
 
 // Links YouTube
@@ -241,4 +300,91 @@ window.addEventListener('load', () => { drawQR(); });
   overlay?.addEventListener('click', close);
   btnClose?.addEventListener('click', close);
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
+})();
+
+// Guardar formulario en Firestore
+(function initFormSave(){
+  const form = document.getElementById('form-registro');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const nextBtn = document.getElementById('btn-next');
+    const prevBtn = document.getElementById('btn-prev');
+    const setBusy = (b)=>{
+      submitBtn && (submitBtn.disabled = b);
+      nextBtn && (nextBtn.disabled = b);
+      prevBtn && (prevBtn.disabled = b);
+      if (submitBtn) submitBtn.textContent = b ? 'Guardando…' : 'Guardar';
+    };
+    try {
+      setBusy(true);
+      // Asegurar autenticación anónima antes de cualquier acceso
+      const user = await ensureAuth();
+      if (!user) { alert('No se pudo autenticar. Verificá la configuración de Firebase Auth.'); setBusy(false); return; }
+      const data = Object.fromEntries(new FormData(form).entries());
+      // Eliminar valores tipo File no soportados por Firestore
+      if (data && typeof data === 'object' && 'apto_file' in data) {
+        try {
+          // En algunos navegadores será instancia de File
+          if (data.apto_file instanceof File || typeof data.apto_file === 'object') {
+            delete data.apto_file;
+          }
+        } catch { delete data.apto_file; }
+      }
+      // Normalizar números y flags simples
+      if (typeof data.anios !== 'undefined' && data.anios !== '') data.anios = Number(data.anios);
+      if (typeof data.handicap !== 'undefined' && data.handicap !== '') data.handicap = Number(data.handicap);
+      // Si modalidad es Otro, usar modalidad_otro
+      if ((data.modalidad||'').toLowerCase() === 'otro' && data.modalidad_otro) {
+        data.modalidad = data.modalidad_otro;
+      }
+      delete data.modalidad_otro;
+      // Subir archivo de apto (máx 5 MB)
+      try {
+        const aptoFileInput = document.getElementById('apto_file');
+        if (aptoFileInput && aptoFileInput.files && aptoFileInput.files[0]) {
+          const file = aptoFileInput.files[0];
+          const MAX = 5 * 1024 * 1024;
+          if (file.size > MAX) {
+            alert('El archivo supera los 5 MB. Seleccione uno más liviano.');
+            setBusy(false);
+            return;
+          }
+          const safeName = file.name.replace(/[^a-z0-9._-]+/gi, '_');
+          const path = `aptos/${Date.now()}_${safeName}`;
+          const ref = storageRef(storage, path);
+          await uploadBytesResumable(ref, file, { contentType: file.type || 'application/octet-stream' });
+          const url = await getDownloadURL(ref);
+          data.apto_file_name = file.name;
+          data.apto_file_url = url;
+          data.apto_file_path = path;
+          data.apto_file_size = file.size;
+        }
+      } catch (e) {
+        console.error('[form] error subiendo archivo', e);
+        alert('Error subiendo el archivo del apto');
+        setBusy(false);
+        return;
+      }
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db, 'formularios'), data);
+      alert('Guardado en Firebase');
+      form.reset();
+      // Ajustes de UI tras reset
+      {
+        const nameEl = document.getElementById('apto_file_name');
+        if (nameEl) nameEl.textContent = 'Seleccionar Archivo';
+        const fileInput = document.getElementById('apto_file');
+        if (fileInput) fileInput.value = '';
+      }
+      const row = document.getElementById('modalidad-otro-row');
+      row && row.classList.add('hidden');
+    } catch (err) {
+      console.error('[form] error guardando', err);
+      alert('Error guardando en Firebase');
+    } finally {
+      setBusy(false);
+    }
+  });
 })();

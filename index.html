@@ -65,78 +65,90 @@
         <form id="form-registro" class="grid gap-4">
           <div id="tab-personales" class="grid gap-3">
             <div class="grid md:grid-cols-3 gap-3">
-              <label class="field md:col-span-2">Nombre y Apellido
+              <label class="field md:col-span-2">
                 <input class="input-base" name="nombre" required placeholder="Nombre completo" />
               </label>
               <div class="grid grid-cols-2 gap-2">
-                <label class="field">Fecha de Nacimiento
-                  <input class="input-base" type="date" name="nacimiento" required />
+                <label class="field">
+                  <div class="grid grid-cols-[1fr_auto] items-center gap-2">
+                    <input class="input-base" type="date" name="nacimiento" required aria-label="Fecha de Nacimiento" title="Fecha de Nacimiento" placeholder="Fecha nacimiento" />
+                    <span class="text-xs muted leading-tight">Fecha Nacimiento</span>
+                  </div>
                 </label>
-                <label class="field justify-self-end text-right">Edad
-                  <input class="input-base" id="edad" name="edad" placeholder="-" readonly maxlength="2" inputmode="numeric" style="width: 56px; text-align: right;" />
+                <label class="field justify-self-end text-right">
+                  <input class="input-base" id="edad" name="edad" placeholder="-" readonly maxlength="2" inputmode="numeric" style="width: 56px; text-align: right;" aria-label="Edad" title="Edad" />
                 </label>
               </div>
             </div>
-            <div class="grid md:grid-cols-2 gap-3">
-              <div class="grid gap-3">
-                <label class="field">Domicilio
-                  <input class="input-base" name="domicilio" placeholder="Calle y número" />
-                </label>
-                <label class="field">Ciudad
+            <div class="grid gap-3">
+              <label class="field">
+                <input class="input-base" name="domicilio" placeholder="Direccion" />
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="field">
                   <input class="input-base" name="ciudad" placeholder="Ciudad" />
                 </label>
+                <label class="field">
+                  <input class="input-base" name="nacionalidad" placeholder="País" />
+                </label>
               </div>
-              <label class="field">Nacionalidad
-                <input class="input-base" name="nacionalidad" placeholder="País" />
-              </label>
             </div>
             <div class="grid md:grid-cols-3 gap-3">
-              <label class="field">Teléfono
-                <input class="input-base" name="telefono" inputmode="tel" placeholder="Ej: +54 9 ..." />
+              <label class="field">
+                <input class="input-base" name="telefono" inputmode="tel" placeholder="Telefono" />
               </label>
-              <label class="field">Email
-                <input class="input-base" name="email" type="email" placeholder="nombre@dominio.com" />
+              <label class="field">
+                <input class="input-base" name="email" type="email" placeholder="Email" />
               </label>
-              <label class="field">Ocupación
+              <label class="field">
                 <input class="input-base" name="ocupacion" placeholder="Profesión / ocupación" />
               </label>
             </div>
           </div>
           <div id="tab-medica" class="hidden grid gap-3">
-            <label class="field">Alergias
+            <label class="field">
               <textarea class="textarea-base" name="alergias" rows="2" placeholder="Especificar alergias relevantes"></textarea>
             </label>
-            <label class="field">Lesiones o cirugías previas
-              <textarea class="textarea-base" name="lesiones" rows="2"></textarea>
+            <label class="field">
+              <textarea class="textarea-base" name="lesiones" rows="2" placeholder="Lesiones o cirugías previas"></textarea>
             </label>
-            <label class="field">Condición médica a tener en cuenta
-              <textarea class="textarea-base" name="condicion" rows="2"></textarea>
+            <label class="field">
+              <textarea class="textarea-base" name="condicion" rows="2" placeholder="Condición médica a tener en cuenta"></textarea>
             </label>
             <div class="grid md:grid-cols-3 gap-3 items-end">
-              <label class="field">Apto médico
-                <select class="select-base" name="apto">
-                  <option value="si">Sí</option>
+              <label class="field">
+                <select class="select-base" name="apto" aria-label="Apto médico" title="Apto médico">
+                  <option value="" disabled selected>Apto Medico</option>
+                  <option value="si">Si</option>
                   <option value="no">No</option>
                 </select>
               </label>
-              <label class="field">Vencimiento del apto
-                <input class="input-base" type="date" name="apto_vto" />
+              <label class="field">
+                <div class="grid grid-cols-[1fr_auto] items-center gap-2">
+                  <input class="input-base" type="date" name="apto_vto" aria-label="Vencimiento del apto" title="Vencimiento del apto" placeholder="Vencimiento apto medico" />
+                  <span class="text-xs muted whitespace-nowrap">Fecha vencimiento</span>
+                </div>
               </label>
-              <label class="field">Adjuntar apto
-                <input class="input-base" type="file" name="apto_file" accept="image/*,.pdf" />
-              </label>
+              <div class="field">
+                <div class="grid grid-cols-[auto,1fr] items-center gap-2">
+                  <label for="apto_file" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Subir Apto Medico</label>
+                  <span id="apto_file_name" class="text-xs muted truncate">Seleccionar Archivo</span>
+                </div>
+                <input id="apto_file" class="sr-only" type="file" name="apto_file" accept="image/*,.pdf" aria-label="Adjuntar apto" title="Adjuntar apto" />
+              </div>
             </div>
           </div>
           <div id="tab-experiencia" class="hidden grid gap-3">
             <div class="grid md:grid-cols-3 gap-3">
-              <label class="field">Años practicando
-                <input class="input-base" type="number" name="anios" min="0" />
+              <label class="field">
+                <input class="input-base" type="number" name="anios" min="0" placeholder="Años practicando" />
               </label>
-              <label class="field">Hándicap actual
-                <input class="input-base" type="number" name="handicap" step="0.1" />
+              <label class="field">
+                <input class="input-base" type="number" name="handicap" step="0.1" placeholder="Hándicap actual" />
               </label>
-              <label class="field">Frecuencia semanal
-                <select class="select-base" name="frecuencia">
+              <label class="field">
+                <select class="select-base" name="frecuencia" aria-label="Frecuencia semanal" title="Frecuencia semanal">
+                  <option value="" disabled selected>Frecuencia semanal</option>
                   <option>1</option>
                   <option>2</option>
                   <option>3</option>
@@ -145,19 +157,24 @@
               </label>
             </div>
             <div class="grid md:grid-cols-2 gap-3">
-              <label class="field">Club o cancha
-                <input class="input-base" name="club" />
+              <label class="field">
+                <input class="input-base" name="club" placeholder="Club o cancha" />
               </label>
-              <label class="field">Modalidad favorita
-                <select class="select-base" name="modalidad">
+              <label class="field">
+                <select class="select-base" name="modalidad" aria-label="Modalidad preferida" title="Modalidad preferida">
+                  <option value="" disabled selected>Modalidad preferida</option>
                   <option>Medal Play</option>
                   <option>Match Play</option>
                   <option>Otro</option>
                 </select>
               </label>
             </div>
-            <label class="field">Clases previas
-              <select class="select-base" name="clases_previas">
+            <label id="modalidad-otro-row" class="field hidden">
+              <input class="input-base" name="modalidad_otro" placeholder="Especificar modalidad" />
+            </label>
+            <label class="field">
+              <select class="select-base" name="clases_previas" aria-label="Clases previas" title="Clases previas">
+                <option value="" disabled selected>Clases Previas</option>
                 <option>Sí</option>
                 <option>No</option>
               </select>
@@ -252,7 +269,7 @@
       </div>
     </div>
 
-    <script defer src="./main.js?v=4"></script>
+    <script type="module" src="./main.js?v=5"></script>
   </body>
   </html>
 
