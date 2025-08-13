@@ -1,7 +1,7 @@
 ## Golf App — README (v0.5)
 
-![Preview](https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73)
-![Preview](https://github.com/user-attachments/assets/edd333a2-8c30-4152-9a40-2523fc60ef62)
+![Menu User](https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73)
+![Menu Admin](https://github.com/user-attachments/assets/edd333a2-8c30-4152-9a40-2523fc60ef62)
 
 
 
