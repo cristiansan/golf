@@ -1,0 +1,7 @@
+# Este valor se usa para generar la navegación interna del sitio
+url: https://lucianosanchogolf.com.ar
+
+# Información de la aplicación
+title: Luciano Sancho Golf
+version: 0.5
+description: App para cargar alumnos de Golf y compartirles videos
