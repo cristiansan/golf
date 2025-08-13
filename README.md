@@ -1,5 +1,7 @@
 ## Golf App — README (v0.5)
 
+![Preview](https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73)
+
 ### v0.5
 - Implementé login de administrador tocando el logo, validando la clave desde Firebase (Firestore). Acepto `admin_key` en texto plano o `admin_key_hash` (SHA-256).
 - Reorganicé el menú: por defecto muestro Formulario, Videos y QR. Al loguearme como admin aparece el bloque “Admin” con “Agregar Links” y “Alumnos”.
