@@ -46,7 +46,7 @@
           <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-full block opacity-90" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.3</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.4</button>
           </div>
         </div>
       </div>
@@ -238,6 +238,14 @@
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         <div class="text-sm space-y-4">
+          <div>
+            <div class="font-medium mb-1">v0.4</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Integración con Firebase: Firestore para guardar formularios y Storage para subir apto (máx. 5 MB).</li>
+              <li>Autenticación anónima requerida para guardar/subir.</li>
+              <li>Mejoras de UI: placeholders en campos, etiquetas compactas y leyendas junto a fechas/archivos.</li>
+            </ul>
+          </div>
           <div>
             <div class="font-medium mb-1">v0.3</div>
             <ul class="list-disc pl-5 space-y-1">
