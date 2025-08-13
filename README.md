@@ -27,6 +27,8 @@
 - Pego y publico estas reglas (conservo mis reglas de `formularios` y añado el bloque `config/admin` y un cierre por defecto):
 
 ```
+<img width="358" height="635" alt="image" src="https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73" />
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
