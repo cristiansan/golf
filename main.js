@@ -5,8 +5,9 @@ document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
+//import "tailwindcss";
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCSbupnAd-CH5aCi9b5CvILnIIE74D5M34',
@@ -20,9 +21,35 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 try { getAnalytics(fbApp); } catch(e) { console.warn('[firebase] analytics no disponible', e?.message||e); }
-const db = getFirestore(fbApp);
+const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
 const storage = getStorage(fbApp);
 const auth = getAuth(fbApp);
+
+// Referencia a config de admin en Firestore
+const ADMIN_CONFIG_REF = doc(db, 'config', 'admin');
+
+function isSha256Hex(s){ return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(String(s).trim()); }
+
+async function fetchAdminKeyFromFirebase(){
+  try {
+    await ensureAuth();
+    const snap = await getDoc(ADMIN_CONFIG_REF);
+    if (!snap.exists()) return '';
+    const data = snap.data() || {};
+    // Puede venir como 'admin_key_hash' (sha-256 hex) o 'admin_key' (texto plano)
+    return String((data.admin_key_hash ?? data.admin_key ?? '') || '').trim();
+  } catch (e) {
+    console.warn('[admin] no se pudo leer admin_key', e?.message||e);
+    return '';
+  }
+}
+
+function setIsAdminLocal(flag){
+  try { localStorage.setItem('is_admin', flag ? '1' : ''); } catch {}
+}
+function isAdminLocal(){
+  try { return localStorage.getItem('is_admin') === '1'; } catch { return false; }
+}
 
 async function ensureAuth() {
   try {
@@ -36,7 +63,7 @@ async function ensureAuth() {
 }
 
 // Helpers de secciones
-const sections = { formulario: sec('formulario'), links: sec('links'), qr: sec('qr') };
+const sections = { formulario: sec('formulario'), videos: sec('videos'), links: sec('links'), qr: sec('qr') };
 function sec(id){ return document.getElementById('sec-' + id); }
 function switchTo(target){
   Object.keys(sections).forEach(k => sections[k].classList.toggle('hidden', k!==target));
@@ -85,6 +112,72 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawe
 new MutationObserver(setDrawerIcon).observe(drawerEl, { attributes: true, attributeFilter: ['class'] });
 setDrawerIcon();
 
+// UI: botón Alumnos solo para admin
+function ensureAlumnosNav(){
+  try {
+    const group = document.getElementById('nav-admin');
+    const header = document.getElementById('nav-admin-header');
+    if (!group || !header) return;
+    let btn = document.getElementById('nav-alumnos');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'nav-alumnos';
+      btn.className = 'w-full text-left px-3 py-2 rounded-md hover:bg-black/20';
+      btn.textContent = 'Alumnos';
+      btn.addEventListener('click', ()=>{ window.location.href = './alumnos.html'; });
+      group.appendChild(btn);
+    }
+    header.style.display = '';
+    group.style.display = '';
+  } catch {}
+}
+
+if (isAdminLocal()) {
+  ensureAlumnosNav();
+}
+
+// Mostrar/ocultar botón Links según admin
+function ensureLinksNavVisibility(){
+  const btn = document.querySelector('#app-drawer [data-section="links"]');
+  const header = document.getElementById('nav-admin-header');
+  const group = document.getElementById('nav-admin');
+  if (!btn || !header || !group) return;
+  const isAdmin = isAdminLocal();
+  header.style.display = isAdmin ? '' : 'none';
+  group.style.display = isAdmin ? '' : 'none';
+}
+ensureLinksNavVisibility();
+
+// Click en logo para login de admin
+(function initAdminLoginViaLogo(){
+  const logo = document.getElementById('drawer-logo');
+  if (!logo) return;
+  logo.style.cursor = 'pointer';
+  logo.addEventListener('click', async()=>{
+    try {
+      await ensureAuth();
+      const entered = prompt('Ingrese clave de administrador:');
+      if (entered == null) return;
+      const [storedVal, enteredHash] = await Promise.all([
+        fetchAdminKeyFromFirebase(),
+        sha256Hex(String(entered).trim()),
+      ]);
+      if (!storedVal) { alert('Configuración de clave no encontrada en Firebase'); return; }
+      const enteredPlain = String(entered).trim();
+      const ok = isSha256Hex(storedVal) ? (enteredHash === storedVal) : (enteredPlain === storedVal);
+      if (!ok) { alert('Clave incorrecta'); return; }
+      // éxito
+      try { localStorage.setItem('admin_key_hash', storedVal); } catch {}
+      setIsAdminLocal(true);
+      ensureAlumnosNav();
+      ensureLinksNavVisibility();
+      alert('Acceso administrador concedido');
+    } catch (e) {
+      alert('Error validando clave de administrador');
+    }
+  });
+})();
+
 // Tabs con animación
 const tabs = ['tab-personales','tab-medica','tab-experiencia'];
 let currentTabIndex = 0;
@@ -99,6 +192,31 @@ document.querySelectorAll('.tab-btn').forEach((b,i)=>b.addEventListener('click',
 document.getElementById('btn-prev').addEventListener('click',()=>showTab(currentTabIndex-1));
 document.getElementById('btn-next').addEventListener('click',()=>showTab(currentTabIndex+1));
 showTab(0);
+
+// Prefill del formulario si venimos desde Alumnos
+(function initPrefillForm(){
+  const raw = localStorage.getItem('fill_form_data');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw||'{}') || {};
+    localStorage.removeItem('fill_form_data');
+    const form = document.getElementById('form-registro');
+    if (!form) return;
+    // Asignar campos presentes
+    Object.entries(data).forEach(([k,v])=>{
+      const el = form.querySelector(`[name="${k}"]`);
+      if (!el) return;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.value = String(v ?? '');
+      } else if (el instanceof HTMLSelectElement) {
+        el.value = String(v ?? '');
+      }
+    });
+    // Volver a la sección Formulario y primer tab
+    switchTo('formulario');
+    showTab(0);
+  } catch {}
+})();
 
 // Edad auto en base a nacimiento
 (function initEdad(){
@@ -146,9 +264,10 @@ showTab(0);
   fileInput.addEventListener('change', update);
 })();
 
-// Links YouTube
+// Links YouTube (admin) y Videos (público)
 const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
 const elGrid = document.getElementById('links-grid');
+const elVideos = document.getElementById('videos-grid');
 function youtubeId(url){ try{ const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1); if(u.searchParams.get('v')) return u.searchParams.get('v'); const p=u.pathname.split('/'); const i=p.indexOf('embed'); if(i>=0&&p[i+1]) return p[i+1]; return ''; } catch { return ''; } }
 function renderLinks(){
   let items=[...state.links];
@@ -172,17 +291,44 @@ function renderLinks(){
       if(act==='del'){
         const input = prompt('Ingrese clave para borrar:');
         if (input == null) return;
-        const enteredHash = await sha256Hex(input.trim());
-        const stored = localStorage.getItem('admin_key_hash')||'';
-        const ADMIN_DEFAULT_HASH = 'e5df1f6c87fb7efb1f0b32e2b2043614c0f8ea4b5ddfbc89d4b6ff94a639a6a0';
-        const candidates = [item.owner||'', stored||'', ADMIN_DEFAULT_HASH];
-        const authorized = candidates.filter(Boolean).includes(enteredHash);
+        const enteredPlain = input.trim();
+        const enteredHash = await sha256Hex(enteredPlain);
+        await ensureAuth();
+        let stored = localStorage.getItem('admin_key_hash')||'';
+        if (!stored) {
+          // Intentar cargar desde Firebase para evitar claves hardcodeadas
+          stored = await fetchAdminKeyFromFirebase();
+          if (stored) { try { localStorage.setItem('admin_key_hash', stored); } catch {} }
+        }
+        const candidates = [item.owner||'', stored||''].filter(Boolean);
+        const authorized = candidates.some(v => isSha256Hex(v) ? (v === enteredHash) : (v === enteredPlain));
         if (!authorized) { alert('No autorizado para borrar'); return; }
-        if (!stored) localStorage.setItem('admin_key_hash', enteredHash);
         state.links=state.links.filter(x=>x.id!==item.id);
         localStorage.setItem('yt_links', JSON.stringify(state.links));
         renderLinks();
       }
+    });
+  });
+}
+
+function renderVideos(){
+  if (!elVideos) return;
+  let items=[...state.links];
+  items.sort((a,b)=>b.createdAt-a.createdAt);
+  elVideos.innerHTML = items.map(it=>{
+    const id=youtubeId(it.url);
+    const thumb=id?`https://img.youtube.com/vi/${id}/hqdefault.jpg`:'';
+    const title = it.title || 'Video';
+    return `<article class="link-card fade-in"><div class="font-medium mb-2">${title}</div><img class="thumb mb-2" src="${thumb}" alt="${title}"/><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="text-sm muted truncate">${new URL(it.url).hostname}</div></div><div class="shrink-0 flex gap-2"><button class="p-2 rounded-md border btn" style="border-color: var(--border)" data-act="open" data-id="${it.id}" title="Abrir"><i data-lucide="external-link"></i></button></div></div></article>`;
+  }).join('');
+  window.lucide?.createIcons();
+  elVideos.querySelectorAll('button[data-act]').forEach(btn=>{
+    const id=btn.getAttribute('data-id');
+    const act=btn.getAttribute('data-act');
+    const item=state.links.find(x=>String(x.id)===String(id));
+    if(!item) return;
+    btn.addEventListener('click', async()=>{
+      if(act==='open') window.open(item.url,'_blank');
     });
   });
 }
@@ -199,13 +345,19 @@ window.setAdminKey = async function(pwd){
 };
 
 document.getElementById('btn-add-link').addEventListener('click', async()=>{
-  const stored = localStorage.getItem('admin_key_hash');
-  if (!stored) { alert('Clave no configurada. Desde este navegador, ejecutá en consola: setAdminKey("5991")'); return; }
+  await ensureAuth();
+  let stored = localStorage.getItem('admin_key_hash')||'';
+  if (!stored) {
+    stored = await fetchAdminKeyFromFirebase();
+    if (stored) { try { localStorage.setItem('admin_key_hash', stored); } catch {} }
+  }
   const input = prompt('Ingrese clave para añadir videos:');
   if (input == null) return; // cancelado
   try {
-    const hash = await sha256Hex(input.trim());
-    if (hash !== stored) { alert('Clave incorrecta'); return; }
+    const plain = input.trim();
+    const hash = await sha256Hex(plain);
+    const ok = isSha256Hex(stored) ? (hash === stored) : (plain === stored);
+    if (!ok) { alert('Clave incorrecta'); return; }
   } catch { alert('Error validando clave'); return; }
   const title=document.getElementById('yt-title').value.trim();
   const url=document.getElementById('yt-url').value.trim();
@@ -216,8 +368,10 @@ document.getElementById('btn-add-link').addEventListener('click', async()=>{
   document.getElementById('yt-title').value='';
   document.getElementById('yt-url').value='';
   renderLinks();
+  renderVideos();
 });
 renderLinks();
+renderVideos();
 
 // QR
 function getQrCanvas(){ return document.getElementById('qr-canvas'); }
@@ -286,6 +440,40 @@ async function drawQrViaImage(canvas, text, size, margin){
 }
 document.getElementById('btn-gen-qr').addEventListener('click', () => { console.log('[qr] click generar'); drawQR(); });
 window.addEventListener('load', () => { drawQR(); });
+
+// Compartir QR y enlace
+(function initShareQR(){
+  const btn = document.getElementById('btn-share-qr');
+  if (!btn) return;
+  btn.addEventListener('click', async()=>{
+    try {
+      const url = document.getElementById('qr-url')?.value?.trim() || '';
+      const canvas = document.getElementById('qr-canvas');
+      if (!canvas || !url) { alert('No hay QR para compartir'); return; }
+      // Crear blob del canvas
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const files = blob ? [new File([blob], 'qr.png', { type: 'image/png' })] : [];
+      const shareData = { title: 'QR', text: url, url, files };
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share(shareData);
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share({ title: 'QR', text: url, url });
+        return;
+      }
+      // Fallback: copiar link y abrir imagen en nueva pestaña
+      try { await navigator.clipboard.writeText(url); alert('Link copiado. Se abrirá la imagen del QR en una nueva pestaña.'); } catch {}
+      if (blob) {
+        const imgUrl = URL.createObjectURL(blob);
+        window.open(imgUrl, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(imgUrl), 5000);
+      }
+    } catch (e) {
+      alert('No se pudo compartir');
+    }
+  });
+})();
 
 // Changelog modal
 (function initChangelog(){
