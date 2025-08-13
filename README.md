@@ -1,6 +1,11 @@
 ## Golf App — README (v0.5)
 
-![Preview](https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73)
+![Menu User](https://github.com/user-attachments/assets/4066f40b-04f7-41e3-84f5-1dd0614d0e73)
+![Menu Admin](https://github.com/user-attachments/assets/edd333a2-8c30-4152-9a40-2523fc60ef62)
+
+![Generador de QR](https://github.com/user-attachments/assets/bf98850e-cbbf-43fa-8380-613853a44caa)
+![Agregar videos](https://github.com/user-attachments/assets/06a64f17-b78d-488d-bc3d-d723fa33fc67)
+
 
 ### v0.5
 - Implementé login de administrador tocando el logo, validando la clave desde Firebase (Firestore). Acepto `admin_key` en texto plano o `admin_key_hash` (SHA-256).
