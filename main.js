@@ -624,3 +624,37 @@ ensureLinksNavVisibility();
 
   console.log('[auth] sistema inicializado');
 })();
+
+// Modal del changelog
+(function initChangelog() {
+  const changelogModal = document.getElementById('modal-changelog');
+  const btnChangelog = document.getElementById('btn-changelog');
+  const btnCloseChangelog = document.getElementById('btn-close-changelog');
+  const changelogOverlay = document.getElementById('modal-changelog-overlay');
+
+  // Abrir modal del changelog
+  btnChangelog?.addEventListener('click', () => {
+    changelogModal.classList.remove('hidden');
+    window.lucide?.createIcons();
+  });
+
+  // Cerrar modal del changelog
+  function closeChangelogModal() {
+    changelogModal.classList.add('hidden');
+  }
+
+  // Cerrar con botón X
+  btnCloseChangelog?.addEventListener('click', closeChangelogModal);
+
+  // Cerrar con overlay
+  changelogOverlay?.addEventListener('click', closeChangelogModal);
+
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !changelogModal.classList.contains('hidden')) {
+      closeChangelogModal();
+    }
+  });
+
+  console.log('[changelog] sistema inicializado');
+})();
