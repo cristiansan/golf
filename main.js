@@ -1,11 +1,34 @@
+// Variables globales para autenticación (deben ir antes de cualquier función que las use)
+let currentUser = null;
+let isUserAdmin = false;
+
+// Función para mostrar/ocultar la app según el estado de auth
+function toggleAppVisibility(isLoggedIn) {
+  const loginOverlay = document.getElementById('login-overlay');
+  const mainContent = document.querySelector('main');
+  const header = document.querySelector('header');
+  
+  if (isLoggedIn) {
+    // Usuario logueado - mostrar app
+    loginOverlay.style.display = 'none';
+    mainContent.style.display = 'block';
+    header.style.display = 'flex';
+  } else {
+    // Usuario no logueado - mostrar overlay de login
+    loginOverlay.style.display = 'flex';
+    mainContent.style.display = 'none';
+    header.style.display = 'none';
+  }
+}
+
 // Inicialización de iconos Lucide
 document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons(); console.log('[app] DOMContentLoaded'); });
 
 // Firebase (ESM)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy, updateDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 //import "tailwindcss";
 
@@ -116,8 +139,8 @@ setDrawerIcon();
 function ensureAlumnosNav(){
   try {
     const group = document.getElementById('nav-admin');
-    const header = document.getElementById('nav-admin-header');
-    if (!group || !header) return;
+    if (!group) return;
+    
     let btn = document.getElementById('nav-alumnos');
     if (!btn) {
       btn = document.createElement('button');
@@ -127,8 +150,6 @@ function ensureAlumnosNav(){
       btn.addEventListener('click', ()=>{ window.location.href = './alumnos.html'; });
       group.appendChild(btn);
     }
-    header.style.display = '';
-    group.style.display = '';
   } catch {}
 }
 
@@ -136,15 +157,13 @@ if (isAdminLocal()) {
   ensureAlumnosNav();
 }
 
-// Mostrar/ocultar botón Links según admin
+// Mostrar/ocultar botón Links según admin (usando el nuevo sistema)
 function ensureLinksNavVisibility(){
-  const btn = document.querySelector('#app-drawer [data-section="links"]');
-  const header = document.getElementById('nav-admin-header');
-  const group = document.getElementById('nav-admin');
-  if (!btn || !header || !group) return;
-  const isAdmin = isAdminLocal();
-  header.style.display = isAdmin ? '' : 'none';
-  group.style.display = isAdmin ? '' : 'none';
+  // Esta función ahora se maneja desde updateAdminUI
+  // Solo se ejecuta al cargar la página
+  if (currentUser) {
+    checkUserAdminStatus(currentUser);
+  }
 }
 ensureLinksNavVisibility();
 
@@ -575,4 +594,401 @@ window.addEventListener('load', () => { drawQR(); });
       setBusy(false);
     }
   });
+})();
+
+// Sistema de Autenticación
+(function initAuth() {
+  const loginModal = document.getElementById('modal-login');
+  const registerModal = document.getElementById('modal-register');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const btnLogin = document.getElementById('btn-login');
+  const btnLogout = document.getElementById('btn-logout');
+  const userInfo = document.getElementById('user-info');
+  const userEmail = document.getElementById('user-email');
+
+  // Verificar si el usuario es admin
+  async function checkUserAdminStatus(user) {
+    if (!user) return false;
+    
+    try {
+      // Buscar el perfil del usuario en Firestore
+      const userQuery = query(
+        collection(db, 'usuarios'), 
+        query => query.where('uid', '==', user.uid)
+      );
+      const userSnapshot = await getDocs(userQuery);
+      
+      if (!userSnapshot.empty) {
+        const userData = userSnapshot.docs[0].data();
+        isUserAdmin = userData.admin === true;
+        console.log('[auth] usuario admin:', isUserAdmin);
+        
+        // Actualizar UI de admin
+        updateAdminUI(isUserAdmin);
+      } else {
+        isUserAdmin = false;
+        updateAdminUI(false);
+      }
+    } catch (error) {
+      console.warn('[auth] error verificando admin:', error);
+      isUserAdmin = false;
+      updateAdminUI(false);
+    }
+    
+    return isUserAdmin;
+  }
+
+  // Actualizar UI de admin
+  function updateAdminUI(isAdmin) {
+    const header = document.getElementById('nav-admin-header');
+    const group = document.getElementById('nav-admin');
+    
+    if (header && group) {
+      header.style.display = isAdmin ? '' : 'none';
+      group.style.display = isAdmin ? '' : 'none';
+    }
+    
+    // Asegurar que el botón de Alumnos esté disponible
+    if (isAdmin) {
+      ensureAlumnosNav();
+    }
+  }
+
+  // Verificar si el usuario ya tiene formulario
+  async function checkUserHasForm(user) {
+    if (!user) return false;
+    
+    try {
+      const formQuery = query(
+        collection(db, 'formularios'),
+        query => query.where('email', '==', user.email)
+      );
+      const formSnapshot = await getDocs(formQuery);
+      return !formSnapshot.empty;
+    } catch (error) {
+      console.warn('[auth] error verificando formulario:', error);
+      return false;
+    }
+  }
+
+  // Estado de autenticación
+  async function updateAuthUI(user) {
+    currentUser = user;
+    
+    if (user) {
+      // Usuario logueado
+      btnLogin.style.display = 'none';
+      userInfo.style.display = 'flex';
+      userEmail.textContent = user.email || 'Usuario';
+      
+      // Mostrar la app
+      toggleAppVisibility(true);
+      
+      // Verificar si es admin
+      checkUserAdminStatus(user);
+      
+      // Verificar si ya tiene formulario y cambiar sección por defecto
+      const hasForm = await checkUserHasForm(user);
+      if (hasForm) {
+        // Si ya tiene formulario, mostrar Videos por defecto
+        switchTo('videos');
+      } else {
+        // Si no tiene formulario, mostrar Formulario por defecto
+        switchTo('formulario');
+      }
+      
+      // Guardar en localStorage si está marcado "recordarme"
+      const rememberMe = document.getElementById('login-remember')?.checked;
+      if (rememberMe) {
+        try { localStorage.setItem('auth_remember', '1'); } catch {}
+      }
+    } else {
+      // Usuario no logueado
+      btnLogin.style.display = 'block';
+      userInfo.style.display = 'none';
+      userEmail.textContent = '';
+      isUserAdmin = false;
+      updateAdminUI(false);
+      
+      // Ocultar la app
+      toggleAppVisibility(false);
+    }
+  }
+
+  // Observar cambios en el estado de autenticación
+  onAuthStateChanged(auth, async (user) => {
+    await updateAuthUI(user);
+    console.log('[auth] estado cambiado:', user ? user.email : 'no logueado');
+  });
+
+  // Mostrar modal de login
+  btnLogin?.addEventListener('click', () => {
+    loginModal.classList.remove('hidden');
+    window.lucide?.createIcons();
+  });
+
+  // Event listener para el botón de login obligatorio
+  document.getElementById('btn-login-required')?.addEventListener('click', () => {
+    document.getElementById('modal-login').classList.remove('hidden');
+    window.lucide?.createIcons();
+  });
+
+  // Cerrar modales
+  function closeModals() {
+    loginModal.classList.add('hidden');
+    registerModal.classList.add('hidden');
+  }
+
+  // Cerrar con overlay
+  document.getElementById('modal-login-overlay')?.addEventListener('click', closeModals);
+  document.getElementById('modal-register-overlay')?.addEventListener('click', closeModals);
+
+  // Cerrar con botones X
+  document.getElementById('btn-close-login')?.addEventListener('click', closeModals);
+  document.getElementById('btn-close-register')?.addEventListener('click', closeModals);
+
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModals();
+  });
+
+  // Navegación entre modales
+  document.getElementById('btn-show-register')?.addEventListener('click', () => {
+    loginModal.classList.add('hidden');
+    registerModal.classList.remove('hidden');
+    window.lucide?.createIcons();
+  });
+
+  document.getElementById('btn-show-login')?.addEventListener('click', () => {
+    registerModal.classList.add('hidden');
+    loginModal.classList.remove('hidden');
+    window.lucide?.createIcons();
+  });
+
+  // Login con email/password
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Iniciando...';
+      
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      
+      await signInWithEmailAndPassword(auth, email, password);
+      closeModals();
+      alert('¡Bienvenido!');
+      
+    } catch (error) {
+      console.error('[auth] error login:', error);
+      let message = 'Error al iniciar sesión';
+      
+      switch (error.code) {
+        case 'auth/user-not-found':
+          message = 'No existe una cuenta con este email';
+          break;
+        case 'auth/wrong-password':
+          message = 'Contraseña incorrecta';
+          break;
+        case 'auth/invalid-email':
+          message = 'Email inválido';
+          break;
+        case 'auth/too-many-requests':
+          message = 'Demasiados intentos fallidos. Intenta más tarde';
+          break;
+      }
+      
+      alert(message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+
+  // Registro con email/password
+  registerForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creando cuenta...';
+      
+      const name = document.getElementById('register-name').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      const confirmPassword = document.getElementById('register-confirm-password').value;
+      
+      if (password !== confirmPassword) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      
+      if (password.length < 6) {
+        alert('La contraseña debe tener al menos 6 caracteres');
+        return;
+      }
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Guardar nombre del usuario en Firestore
+      try {
+        await addDoc(collection(db, 'usuarios'), {
+          uid: userCredential.user.uid,
+          nombre: name,
+          email: email,
+          createdAt: serverTimestamp()
+        });
+      } catch (e) {
+        console.warn('[auth] error guardando perfil:', e);
+      }
+      
+      closeModals();
+      alert('¡Cuenta creada exitosamente!');
+      
+    } catch (error) {
+      console.error('[auth] error registro:', error);
+      let message = 'Error al crear la cuenta';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = 'Ya existe una cuenta con este email';
+          break;
+        case 'auth/invalid-email':
+          message = 'Email inválido';
+          break;
+        case 'auth/weak-password':
+          message = 'La contraseña es muy débil';
+          break;
+      }
+      
+      alert(message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+
+  // Login con Google
+  document.getElementById('btn-login-google')?.addEventListener('click', async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      
+      // Configurar persistencia automática para Google
+      await setPersistence(auth, browserLocalPersistence);
+      
+      const result = await signInWithPopup(auth, provider);
+      
+      // Crear perfil de usuario en Firestore si no existe
+      const userDoc = doc(db, 'usuarios', result.user.uid);
+      const userSnap = await getDoc(userDoc);
+      
+      if (!userSnap.exists()) {
+        await setDoc(userDoc, {
+          uid: result.user.uid,
+          email: result.user.email,
+          nombre: result.user.displayName || '',
+          createdAt: serverTimestamp(),
+          admin: false // Por defecto no es admin
+        });
+      }
+      
+      closeModals();
+      console.log('[auth] login con Google exitoso (persistencia automática)');
+    } catch (error) {
+      console.error('[auth] error google login:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        // Usuario cerró el popup, no mostrar error
+        return;
+      }
+      alert('Error al iniciar sesión con Google');
+    }
+  });
+
+  // Logout
+  btnLogout?.addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      alert('Sesión cerrada');
+    } catch (error) {
+      console.error('[auth] error logout:', error);
+      alert('Error al cerrar sesión');
+    }
+  });
+
+  // Recuperar contraseña
+  document.getElementById('btn-forgot-password')?.addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) {
+      alert('Por favor ingresa tu email primero');
+      return;
+    }
+    
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert('Se envió un email para restablecer tu contraseña');
+    } catch (error) {
+      console.error('[auth] error reset password:', error);
+      alert('Error al enviar email de recuperación');
+    }
+  });
+
+  // Limpiar formularios al cerrar modales
+  function clearForms() {
+    loginForm?.reset();
+    registerForm?.reset();
+  }
+  
+  // Limpiar al cerrar
+  document.getElementById('btn-close-login')?.addEventListener('click', clearForms);
+  document.getElementById('btn-close-register')?.addEventListener('click', clearForms);
+  document.getElementById('modal-login-overlay')?.addEventListener('click', clearForms);
+  document.getElementById('modal-register-overlay')?.addEventListener('click', clearForms);
+
+  // Función para hacer admin a un usuario (solo para desarrollo/testing)
+  window.makeUserAdmin = async function(email) {
+    if (!currentUser) {
+      alert('Debes estar logueado para usar esta función');
+      return;
+    }
+    
+    try {
+      // Buscar usuario por email
+      const userQuery = query(
+        collection(db, 'usuarios'), 
+        query => query.where('email', '==', email)
+      );
+      const userSnapshot = await getDocs(userQuery);
+      
+      if (userSnapshot.empty) {
+        alert('Usuario no encontrado');
+        return;
+      }
+      
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data();
+      
+      // Actualizar el campo admin
+      await updateDoc(userDoc.ref, { admin: true });
+      
+      // Si es el usuario actual, actualizar la UI
+      if (userData.uid === currentUser.uid) {
+        isUserAdmin = true;
+        updateAdminUI(true);
+      }
+      
+      alert(`Usuario ${email} ahora es admin`);
+      
+    } catch (error) {
+      console.error('[auth] error haciendo admin:', error);
+      alert('Error al hacer admin al usuario');
+    }
+  };
+
+  console.log('[auth] sistema inicializado');
 })();
