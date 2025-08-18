@@ -49,6 +49,7 @@
             <button id="btn-logout" class="px-2 py-1 rounded-md border btn text-xs" style="border-color: var(--border);">Cerrar</button>
           </div>
           <button id="btn-login" class="px-3 py-1 rounded-md border btn text-sm" style="border-color: var(--border);">Iniciar Sesión</button>
+          <button id="btn-fullscreen" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa"><i data-lucide="maximize-2"></i></button>
           <button id="btn-drawer" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-controls="app-drawer" aria-label="Abrir menú"><i data-lucide="menu"></i></button>
         </div>
       </div>
@@ -71,7 +72,10 @@
                      <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-3/4 mx-auto block opacity-90 rounded-full" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
-                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.7</button>
+            <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
+              <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
+            </button>
+                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.8</button>
           </div>
         </div>
       </div>
@@ -366,20 +370,34 @@
           <h3 class="font-semibold">Notas de versión</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
-        <div class="text-sm space-y-4" style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
-          <div>
-            <div class="font-medium mb-1">v0.7</div>
-            <ul class="list-disc pl-5 space-y-1">
-              <li>Sistema de autenticación completo con Firebase Auth.</li>
-              <li>Login obligatorio: la app no es accesible sin autenticación.</li>
-              <li>Registro de usuarios con email/password y Google.</li>
-              <li>Sistema de admin automático: usuarios con campo admin=true ven opciones especiales.</li>
-              <li>Acceso a "Alumnos" y "Agregar Videos" solo para administradores.</li>
-              <li>Persistencia de sesión y logout funcional.</li>
-              <li>UI mejorada: overlay de login con logo y diseño minimalista.</li>
-              <li>Recuperación de contraseña y validación de formularios.</li>
-            </ul>
-          </div>
+                 <div class="text-sm space-y-4" style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
+           <div>
+             <div class="font-medium mb-1">v0.8</div>
+             <ul class="list-disc pl-5 space-y-1">
+               <li>Funcionalidad de pantalla completa implementada.</li>
+               <li>Botón de pantalla completa en el header (icono compacto).</li>
+               <li>Botón de pantalla completa en el drawer lateral (con texto descriptivo).</li>
+               <li>Iconos dinámicos que cambian según el estado (maximizar/minimizar).</li>
+               <li>Texto del botón del drawer se actualiza automáticamente.</li>
+               <li>Salida de pantalla completa con tecla Escape.</li>
+               <li>Compatibilidad multiplataforma (Chrome, Firefox, Safari, Edge).</li>
+               <li>Detección automática de soporte del navegador.</li>
+               <li>Integración perfecta con el sistema de autenticación existente.</li>
+             </ul>
+           </div>
+           <div>
+             <div class="font-medium mb-1">v0.7</div>
+             <ul class="list-disc pl-5 space-y-1">
+               <li>Sistema de autenticación completo con Firebase Auth.</li>
+               <li>Login obligatorio: la app no es accesible sin autenticación.</li>
+               <li>Registro de usuarios con email/password y Google.</li>
+               <li>Sistema de admin automático: usuarios con campo admin=true ven opciones especiales.</li>
+               <li>Acceso a "Alumnos" y "Agregar Videos" solo para administradores.</li>
+               <li>Persistencia de sesión y logout funcional.</li>
+               <li>UI mejorada: overlay de login con logo y diseño minimalista.</li>
+               <li>Recuperación de contraseña y validación de formularios.</li>
+             </ul>
+           </div>
           <div>
             <div class="font-medium mb-1">v0.6</div>
             <ul class="list-disc pl-5 space-y-1">

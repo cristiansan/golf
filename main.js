@@ -658,3 +658,130 @@ ensureLinksNavVisibility();
 
   console.log('[changelog] sistema inicializado');
 })();
+
+// Sistema de Pantalla Completa
+(function initFullscreen() {
+  const fullscreenBtn = document.getElementById('btn-fullscreen');
+  const fullscreenDrawerBtn = document.getElementById('btn-fullscreen-drawer');
+  
+  // Función para verificar si la pantalla completa está soportada
+  function isFullscreenSupported() {
+    return document.fullscreenEnabled || 
+           document.webkitFullscreenEnabled || 
+           document.mozFullScreenEnabled || 
+           document.msFullscreenEnabled;
+  }
+  
+  // Función para verificar si está en pantalla completa
+  function isFullscreen() {
+    return !!(document.fullscreenElement || 
+              document.webkitFullscreenElement || 
+              document.mozFullScreenElement || 
+              document.msFullscreenElement);
+  }
+  
+  // Función para activar pantalla completa
+  async function enterFullscreen() {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        await document.documentElement.webkitRequestFullscreen();
+      } else if (document.documentElement.mozRequestFullScreen) {
+        await document.documentElement.mozRequestFullScreen();
+      } else if (document.documentElement.msRequestFullscreen) {
+        await document.documentElement.msRequestFullscreen();
+      }
+    } catch (error) {
+      console.warn('[fullscreen] error al activar pantalla completa:', error);
+    }
+  }
+  
+  // Función para salir de pantalla completa
+  async function exitFullscreen() {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        await document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
+    } catch (error) {
+      console.warn('[fullscreen] error al salir de pantalla completa:', error);
+    }
+  }
+  
+  // Función para alternar pantalla completa
+  async function toggleFullscreen() {
+    if (isFullscreen()) {
+      await exitFullscreen();
+    } else {
+      await enterFullscreen();
+    }
+  }
+  
+  // Función para actualizar los iconos de los botones
+  function updateFullscreenIcons() {
+    const isFullscreenMode = isFullscreen();
+    
+    // Actualizar botón del header
+    if (fullscreenBtn) {
+      const icon = fullscreenBtn.querySelector('i');
+      if (icon) {
+        icon.className = isFullscreenMode ? 'lucide lucide-minimize-2' : 'lucide lucide-maximize-2';
+      }
+    }
+    
+    // Actualizar botón del drawer
+    if (fullscreenDrawerBtn) {
+      const icon = fullscreenDrawerBtn.querySelector('i');
+      const textSpan = fullscreenDrawerBtn.querySelector('span');
+      if (icon) {
+        icon.className = isFullscreenMode ? 'lucide lucide-minimize-2' : 'lucide lucide-maximize-2';
+      }
+      if (textSpan) {
+        textSpan.textContent = isFullscreenMode ? 'Salir Pantalla Completa' : 'Pantalla Completa';
+      }
+    }
+  }
+  
+  // Event listener para el botón de pantalla completa del header
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    
+    // Verificar si la pantalla completa está soportada
+    if (!isFullscreenSupported()) {
+      fullscreenBtn.style.display = 'none';
+      console.warn('[fullscreen] pantalla completa no soportada en este navegador');
+    }
+  }
+  
+  // Event listener para el botón de pantalla completa del drawer
+  if (fullscreenDrawerBtn) {
+    fullscreenDrawerBtn.addEventListener('click', toggleFullscreen);
+    
+    // Verificar si la pantalla completa está soportada
+    if (!isFullscreenSupported()) {
+      fullscreenDrawerBtn.style.display = 'none';
+      console.warn('[fullscreen] pantalla completa no soportada en este navegador');
+    }
+  }
+  
+  // Event listeners para cambios de pantalla completa
+  document.addEventListener('fullscreenchange', updateFullscreenIcons);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenIcons);
+  document.addEventListener('mozfullscreenchange', updateFullscreenIcons);
+  document.addEventListener('MSFullscreenChange', updateFullscreenIcons);
+  
+  // Salir de pantalla completa con Escape (opcional)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFullscreen()) {
+      exitFullscreen();
+    }
+  });
+  
+  console.log('[fullscreen] sistema inicializado');
+})();
