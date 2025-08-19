@@ -1,4 +1,4 @@
-## Golf App — README (v0.5)
+## Golf App — README (v0.9)
 
 ![Menu User](https://github.com/user-attachments/assets/736d311e-ee49-4129-9dca-334949de6ab3)
 ![Menu Admin](https://github.com/user-attachments/assets/edd333a2-8c30-4152-9a40-2523fc60ef62)
@@ -6,6 +6,13 @@
 ![Generador de QR](https://github.com/user-attachments/assets/bf98850e-cbbf-43fa-8380-613853a44caa)
 ![Agregar videos](https://github.com/user-attachments/assets/06a64f17-b78d-488d-bc3d-d723fa33fc67)
 
+
+### v0.9
+- Edición de alumnos desde listado: prellenado del formulario y permanencia en la sección correspondiente.
+- Guardado del formulario con serverTimestamp, ownerUid y distinción crear/actualizar; exclusión de archivos del payload.
+- Compatibilidad y permisos Firestore: creación/actualización del usuario admin en `usuarios` con `role: 'admin'`.
+- Ajustes de reglas para permitir edición por admin/propietario y nuevos campos (modalidad_otro, updatedAt, ownerUid).
+- UI: overlay de login simplificado retirando textos redundantes; correcciones de errores (función no definida, permisos).
 
 ### v0.5
 - Implementé login de administrador tocando el logo, validando la clave desde Firebase (Firestore). Acepto `admin_key` en texto plano o `admin_key_hash` (SHA-256).

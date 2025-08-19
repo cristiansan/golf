@@ -925,7 +925,7 @@ ensureLinksNavVisibility();
 (function initFormulario() {
   const form = document.getElementById('form-registro');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabs = ['tab-personales', 'tab-medica', 'tab-experiencia'];
+  const tabs = ['tab-personales', 'tab-medica', 'tab-experiencia', 'tab-notas'];
   const btnPrev = document.getElementById('btn-prev');
   const btnNext = document.getElementById('btn-next');
   const modalidadSelect = document.querySelector('select[name="modalidad"]');
@@ -1001,6 +1001,80 @@ ensureLinksNavVisibility();
         age--;
       }
       edadInput.value = age;
+    }
+  });
+
+  // Función para mostrar/ocultar pestaña de notas según rol de admin
+  function toggleNotasTab(isAdmin) {
+    const notasTabBtn = document.getElementById('tab-notas-btn');
+    if (notasTabBtn) {
+      notasTabBtn.classList.toggle('hidden', !isAdmin);
+    }
+  }
+
+  // Event listener para guardar notas
+  const btnGuardarNotas = document.getElementById('btn-guardar-notas');
+  btnGuardarNotas?.addEventListener('click', async () => {
+    const notasTextarea = document.getElementById('notas-alumno');
+    const notas = notasTextarea.value.trim();
+    
+    if (!notas) {
+      alert('Por favor, escribe alguna nota antes de guardar.');
+      return;
+    }
+
+    if (!currentAlumnoId) {
+      alert('No hay un alumno seleccionado para guardar notas.');
+      return;
+    }
+
+    try {
+      btnGuardarNotas.disabled = true;
+      btnGuardarNotas.textContent = 'Guardando...';
+
+      // Asegurar autenticación
+      const user = await ensureAuth();
+      if (!user) {
+        throw new Error('No se pudo autenticar.');
+      }
+
+      // Verificar que sea admin
+      const isAdmin = await checkUserRole(user);
+      if (!isAdmin) {
+        throw new Error('Solo los administradores pueden guardar notas.');
+      }
+
+      // Crear nueva entrada de notas
+      const nuevaNota = {
+        texto: notas,
+        fecha: serverTimestamp(),
+        adminUid: user.uid,
+        adminEmail: user.email || 'admin@local'
+      };
+
+      // Agregar la nota al historial del alumno
+      const alumnoRef = doc(db, 'formularios', currentAlumnoId);
+      await updateDoc(alumnoRef, {
+        notas: arrayUnion(nuevaNota),
+        notas_ultima_actualizacion: serverTimestamp()
+      });
+
+      // Limpiar textarea y actualizar UI
+      notasTextarea.value = '';
+      await cargarNotasAlumno(currentAlumnoId);
+      
+      btnGuardarNotas.textContent = 'Guardado ✓';
+      setTimeout(() => {
+        btnGuardarNotas.textContent = 'Guardar Notas';
+      }, 2000);
+
+      console.log('[notas] nota guardada exitosamente');
+    } catch (error) {
+      console.error('[notas] error guardando:', error);
+      alert('Error al guardar notas: ' + error.message);
+    } finally {
+      btnGuardarNotas.disabled = false;
+      btnGuardarNotas.textContent = 'Guardar Notas';
     }
   });
 

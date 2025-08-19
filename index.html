@@ -73,7 +73,7 @@
             <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
               <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
             </button>
-                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.8</button>
+                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.9</button>
           </div>
         </div>
       </div>
@@ -88,6 +88,7 @@
           <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-personales" aria-selected="true">Datos Personales</button>
           <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-medica">Info Médica</button>
           <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-experiencia">Experiencia</button>
+          <button id="tab-notas-btn" class="tab-btn px-3 py-2 rounded-md border hidden" style="border-color: var(--border)" data-tab="tab-notas">Notas</button>
         </div>
         <form id="form-registro" class="grid gap-4">
           <div id="tab-personales" class="grid gap-3">
@@ -206,6 +207,35 @@
                 <option>No</option>
               </select>
             </label>
+          </div>
+          
+          <!-- Pestaña de Notas (solo visible para administradores) -->
+          <div id="tab-notas" class="hidden grid gap-3">
+            <div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3 mb-2">
+              <p class="text-sm text-yellow-200/80">
+                <i data-lucide="info" class="w-4 h-4 inline mr-2"></i>
+                Esta sección es solo para administradores. Aquí puedes agregar notas sobre el progreso y mejoras del alumno.
+              </p>
+            </div>
+            
+            <div class="grid gap-3">
+              <label class="field">
+                <span class="block text-sm font-medium mb-2">Notas del Alumno</span>
+                <textarea id="notas-alumno" class="textarea-base" rows="6" placeholder="Escribe aquí las notas sobre el progreso, mejoras necesarias, observaciones del instructor, etc..."></textarea>
+              </label>
+              
+              <div class="flex items-center justify-between">
+                <span class="text-xs muted">Última actualización: <span id="notas-ultima-actualizacion">-</span></span>
+                <button type="button" id="btn-guardar-notas" class="px-3 py-2 rounded-md btn-primary btn text-sm">Guardar Notas</button>
+              </div>
+            </div>
+            
+            <div class="border-t pt-3" style="border-color: var(--border)">
+              <h4 class="text-sm font-medium mb-2">Historial de Notas</h4>
+              <div id="historial-notas" class="space-y-2 max-h-40 overflow-y-auto">
+                <!-- Las notas se cargarán dinámicamente aquí -->
+              </div>
+            </div>
           </div>
           <div class="flex items-center justify-between pt-2 border-t" style="border-color: var(--border)">
             <button type="button" id="btn-prev" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Anterior</button>
@@ -369,6 +399,18 @@
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
                  <div class="text-sm space-y-4" style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
+           <div>
+             <div class="font-medium mb-1">v0.9</div>
+             <ul class="list-disc pl-5 space-y-1">
+               <li>Edición de alumnos: al tocar un alumno se prellenan los datos en el formulario y se mantiene en la sección correspondiente.</li>
+               <li>Guardado del formulario: ahora usa <code>serverTimestamp</code>, agrega <code>ownerUid</code> y distingue entre crear y actualizar.</li>
+               <li>Compatibilidad Firestore: se excluyen archivos del guardado (apto médico) para evitar errores; manejo de permisos mejorado.</li>
+               <li>Admin: al validar la clave se crea/actualiza el documento en <code>usuarios</code> con <code>role: 'admin'</code> para cumplir reglas.</li>
+               <li>Reglas: ajustes para permitir edición por admin/propietario y campos nuevos (modalidad_otro, updatedAt, ownerUid).</li>
+               <li>UI: overlay de login más limpio, se retiraron textos redundantes.</li>
+               <li>Correcciones: errores de permisos, función no definida y estabilidad general.</li>
+             </ul>
+           </div>
            <div>
              <div class="font-medium mb-1">v0.8</div>
              <ul class="list-disc pl-5 space-y-1">
