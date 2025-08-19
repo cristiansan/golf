@@ -69,6 +69,25 @@ body {
 /* Evitar que el título "Golf App" se corte en dos líneas */
 .nav-title { white-space: nowrap; }
 
+/* Estilos para el modal de changelog */
+#modal-changelog .space-y-4::-webkit-scrollbar {
+  width: 6px;
+}
+
+#modal-changelog .space-y-4::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+#modal-changelog .space-y-4::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 3px;
+}
+
+#modal-changelog .space-y-4::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-600);
+}
+
 .container {
   max-width: 1024px;
   margin: 0 auto;
@@ -149,8 +168,158 @@ button.primary:hover { background: var(--primary-600); color: #031b0d; }
 .listado li { border: 1px solid var(--border); background: #0b1220; border-radius: 10px; padding: 10px; font-size: 0.9rem; }
 .listado .muted { color: var(--muted); font-size: 0.8rem; }
 
+/* Estilos para el modal de login de administrador */
+#admin-key-input {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5em;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+#admin-key-input::placeholder {
+  letter-spacing: 0.3em;
+  color: var(--muted);
+}
+
+/* Estilos para el indicador de conexión de Firebase */
+#firebase-connection-indicator {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease-out;
+}
+
+#firebase-connection-indicator:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  #admin-key-input {
+    font-size: 1.5rem;
+    padding: 0.75rem;
+    min-height: 3rem;
+  }
+  
+  #modal-admin-login .relative {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+
+  #firebase-connection-indicator {
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
 @media (min-width: 720px) {
   .container { padding-bottom: 24px; }
+}
+
+/* Estilos para pestañas responsive */
+.tab-btn {
+  transition: all 0.2s ease;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary);
+}
+
+.tab-btn[aria-selected="true"] {
+  background: var(--primary);
+  color: #052e16;
+  border-color: var(--primary);
+}
+
+/* Responsive para pestañas en móviles */
+@media (max-width: 640px) {
+  .tab-btn {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+}
+
+@media (min-width: 768px) {
+  .tab-btn {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Estilos para la sección de videos */
+#videos-grid .link-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#videos-grid .link-card .thumb {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+#videos-grid .link-card button {
+  margin-top: auto;
+}
+
+/* Responsive para videos en móviles */
+@media (max-width: 640px) {
+  #videos-grid .link-card {
+    padding: 12px;
+  }
+  
+  #videos-grid .link-card .thumb {
+    border-radius: 8px;
+  }
+}
+
+/* Estilos para el generador de QR */
+#qr-canvas {
+  width: 300px;
+  height: 300px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #0b1020;
+  display: block;
+  margin: 0 auto;
+}
+
+#qr-url {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+/* Responsive para QR en móviles */
+@media (max-width: 640px) {
+  #qr-canvas {
+    width: 250px;
+    height: 250px;
+  }
 }
 
 

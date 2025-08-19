@@ -1,45 +1,33 @@
-// Variables globales para autenticación (deben ir antes de cualquier función que las use)
-let currentUser = null;
-let isUserAdmin = false;
-
-// Función para generar hash SHA-256 (debe ir antes de cualquier función que la use)
-async function sha256Hex(str){
-  const enc = new TextEncoder();
-  const buf = await crypto.subtle.digest('SHA-256', enc.encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-// Función para mostrar/ocultar la app según el estado de auth
-function toggleAppVisibility(isLoggedIn) {
-  const loginOverlay = document.getElementById('login-overlay');
-  const mainContent = document.querySelector('main');
-  const header = document.querySelector('header');
-  
-  if (isLoggedIn) {
-    // Usuario logueado - mostrar app
-    loginOverlay.style.display = 'none';
-    mainContent.style.display = 'block';
-    header.style.display = 'flex';
-  } else {
-    // Usuario no logueado - mostrar overlay de login
-    loginOverlay.style.display = 'flex';
-    mainContent.style.display = 'none';
-    header.style.display = 'none';
-    
-    // Verificar si hay datos de alumno para cargar (incluso sin estar logueado)
-    // checkAndLoadAlumnoData(); // Comentado temporalmente hasta que se defina
-  }
-}
-
 // Inicialización de iconos Lucide
-document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons(); console.log('[app] DOMContentLoaded'); });
+document.addEventListener('DOMContentLoaded', () => { 
+  window.lucide?.createIcons(); 
+  console.log('[app] DOMContentLoaded');
+  
+  // Event listener inmediato para el botón de login del overlay
+  const btnLoginRequired = document.getElementById('btn-login-required');
+  if (btnLoginRequired) {
+    console.log('[app] botón login del overlay encontrado en DOMContentLoaded');
+    btnLoginRequired.addEventListener('click', () => {
+      console.log('[app] click en botón login del overlay');
+      const loginModal = document.getElementById('modal-login');
+      if (loginModal) {
+        loginModal.classList.remove('hidden');
+        console.log('[app] modal de login mostrado desde overlay');
+        window.lucide?.createIcons();
+      } else {
+        console.warn('[app] modal de login no encontrado desde overlay');
+      }
+    });
+  } else {
+    console.warn('[app] botón login del overlay no encontrado en DOMContentLoaded');
+  }
+});
 
 // Firebase (ESM)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
-import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy, updateDoc, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, getDocs, query, orderBy, updateDoc, setDoc, where, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCSbupnAd-CH5aCi9b5CvILnIIE74D5M34',
@@ -51,112 +39,43 @@ const firebaseConfig = {
   measurementId: 'G-TXFF1RSFEG'
 };
 
-const fbApp = initializeApp(firebaseConfig);
-try { getAnalytics(fbApp); } catch(e) { console.warn('[firebase] analytics no disponible', e?.message||e); }
-const db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
-const storage = getStorage(fbApp);
-const auth = getAuth(fbApp);
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+try { getAnalytics(app); } catch(e) { console.warn('[firebase] analytics no disponible', e?.message||e); }
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-// Referencia a config de admin en Firestore
-const ADMIN_CONFIG_REF = doc(db, 'config', 'admin');
+// Configurar persistencia local
+setPersistence(auth, browserLocalPersistence);
 
-function isSha256Hex(s){ return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(String(s).trim()); }
+// Variables globales
+let currentUser = null;
+let isUserAdmin = false;
 
-async function fetchAdminKeyFromFirebase(){
-  try {
-    await ensureAuth();
-    const snap = await getDoc(ADMIN_CONFIG_REF);
-    if (!snap.exists()) return '';
-    const data = snap.data() || {};
-    // Puede venir como 'admin_key_hash' (sha-256 hex) o 'admin_key' (texto plano)
-    return String((data.admin_key_hash ?? data.admin_key ?? '') || '').trim();
-  } catch (e) {
-    console.warn('[admin] no se pudo leer admin_key', e?.message||e);
-    return '';
+// Función para mostrar/ocultar la app según el estado de auth
+function toggleAppVisibility(isLoggedIn) {
+  const loginOverlay = document.getElementById('login-overlay');
+  const mainContent = document.querySelector('main');
+  const header = document.querySelector('header');
+  
+  if (isLoggedIn) {
+    // Usuario logueado - mostrar app
+    if (loginOverlay) loginOverlay.style.display = 'none';
+    if (mainContent) mainContent.style.display = 'block';
+    if (header) header.style.display = 'flex';
+  } else {
+    // Usuario no logueado - mostrar overlay de login
+    if (loginOverlay) loginOverlay.style.display = 'flex';
+    if (mainContent) mainContent.style.display = 'none';
+    if (header) header.style.display = 'none';
+    
+    // Ocultar modales si están abiertos
+    const loginModal = document.getElementById('modal-login');
+    const registerModal = document.getElementById('modal-register');
+    if (loginModal) loginModal.classList.add('hidden');
+    if (registerModal) registerModal.classList.add('hidden');
   }
 }
-
-function setIsAdminLocal(flag){
-  try { localStorage.setItem('is_admin', flag ? '1' : ''); } catch {}
-}
-function isAdminLocal(){
-  try { return localStorage.getItem('is_admin') === '1'; } catch { return false; }
-}
-
-async function ensureAuth() {
-  try {
-    if (auth.currentUser) return auth.currentUser;
-    const cred = await signInAnonymously(auth);
-    return cred.user;
-  } catch (e) {
-    console.warn('[firebase] error autenticando anónimo', e);
-    return null;
-  }
-}
-
-// Función para verificar si el usuario es admin
-async function checkUserRole(user) {
-  if (!user) return false;
-  try {
-    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-    return userDoc.exists() && userDoc.data().role === 'admin';
-  } catch (e) {
-    console.warn('[auth] error verificando admin:', e);
-    return false;
-  }
-}
-
-// Click en logo para login de admin
-(function initAdminLoginViaLogo(){
-  const logo = document.getElementById('drawer-logo');
-  if (!logo) return;
-  logo.style.cursor = 'pointer';
-  logo.addEventListener('click', async()=>{
-    try {
-      await ensureAuth();
-      const entered = prompt('Ingrese clave de administrador:');
-      if (entered == null) return;
-      const [storedVal, enteredHash] = await Promise.all([
-        fetchAdminKeyFromFirebase(),
-        sha256Hex(String(entered).trim()),
-      ]);
-      if (!storedVal) { alert('Configuración de clave no encontrada en Firebase'); return; }
-      const enteredPlain = String(entered).trim();
-      const ok = isSha256Hex(storedVal) ? (enteredHash === storedVal) : (enteredPlain === storedVal);
-      if (!ok) { alert('Clave incorrecta'); return; }
-      // éxito
-      try { localStorage.setItem('admin_key_hash', storedVal); } catch {}
-      setIsAdminLocal(true);
-      
-      // Crear/actualizar documento de usuario admin en Firestore
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const userRef = doc(db, 'usuarios', user.uid);
-          await setDoc(userRef, {
-            uid: user.uid,
-            role: 'admin',
-            email: user.email || 'admin@local',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-          console.log('[admin] usuario admin creado/actualizado en Firestore');
-        }
-      } catch (e) {
-        console.warn('[admin] error creando usuario en Firestore:', e);
-      }
-      
-      // Actualizar UI de admin inmediatamente
-      updateAdminUI(true);
-      ensureAlumnosNav();
-      
-      alert('Acceso administrador concedido');
-    } catch (e) {
-      console.error('[admin] error:', e);
-      alert('Error validando clave de administrador');
-    }
-  });
-})();
 
 // Helpers de secciones
 const sections = { formulario: sec('formulario'), videos: sec('videos'), links: sec('links'), qr: sec('qr') };
@@ -169,6 +88,15 @@ function switchTo(target){
     void active.offsetWidth;
     active.classList.add('fade-in');
   }
+  
+  // Renderizar videos cuando se cambie a la sección de videos
+  if (target === 'videos') {
+    console.log('[switchTo] 🎬 cambiando a sección videos, renderizando videos');
+    setTimeout(() => {
+      renderVideos();
+    }, 100);
+  }
+  
   closeDrawer();
 }
 
@@ -226,280 +154,464 @@ function ensureAlumnosNav(){
   } catch {}
 }
 
-if (isAdminLocal()) {
-  ensureAlumnosNav();
+// Función para completar datos del formulario desde localStorage
+function fillFormFromLocalStorage() {
+  try {
+    const formData = localStorage.getItem('fill_form_data');
+    if (formData) {
+      const data = JSON.parse(formData);
+      console.log('[formulario] datos cargados desde localStorage:', data);
+      
+      // Obtener y establecer el ID del alumno actual
+      const alumnoId = localStorage.getItem('current_alumno_id');
+      if (alumnoId) {
+        window.currentAlumnoId = alumnoId;
+        console.log('[formulario] ID del alumno establecido:', alumnoId);
+        // Limpiar el ID del localStorage después de usarlo
+        localStorage.removeItem('current_alumno_id');
+      }
+      
+      // Completar campos del formulario
+      const nombreInput = document.querySelector('input[name="nombre"]');
+      if (nombreInput && data.nombre) {
+        nombreInput.value = data.nombre;
+      }
+      
+      // Completar otros campos si existen
+      const emailInput = document.querySelector('input[name="email"]');
+      if (emailInput && data.email) {
+        emailInput.value = data.email;
+      }
+      
+      const telefonoInput = document.querySelector('input[name="telefono"]');
+      if (telefonoInput && data.telefono) {
+        telefonoInput.value = data.telefono;
+      }
+      
+      const edadInput = document.querySelector('input[name="edad"]');
+      if (edadInput && data.edad) {
+        edadInput.value = data.edad;
+      }
+      
+      // Completar campos de info médica si existen
+      const alergiasInput = document.querySelector('input[name="alergias"]');
+      if (alergiasInput && data.alergias) {
+        alergiasInput.value = data.alergias;
+      }
+      
+      const medicamentosInput = document.querySelector('input[name="medicamentos"]');
+      if (medicamentosInput && data.medicamentos) {
+        medicamentosInput.value = data.medicamentos;
+      }
+      
+      // Completar campos de experiencia si existen
+      const experienciaInput = document.querySelector('input[name="experiencia"]');
+      if (experienciaInput && data.experiencia) {
+        experienciaInput.value = data.experiencia;
+      }
+      
+      // Limpiar localStorage después de usar
+      localStorage.removeItem('fill_form_data');
+      
+      console.log('[formulario] formulario completado con datos del alumno');
+      
+      // Actualizar notas del alumno si es admin
+      if (isUserAdmin) {
+        actualizarNotasAlumno();
+      }
+    }
+  } catch (error) {
+    console.warn('[formulario] error cargando datos:', error);
+  }
 }
 
-// Actualizar UI de admin (función global)
+// Función para actualizar notas del alumno actual
+function actualizarNotasAlumno() {
+  const historialNotas = document.getElementById('historial-notas');
+  if (!historialNotas) return;
+  
+  try {
+    const alumnoId = window.currentAlumnoId;
+    if (!alumnoId) {
+      historialNotas.innerHTML = '<p class="text-sm muted">Selecciona un alumno para ver sus notas</p>';
+      return;
+    }
+    
+    const notas = JSON.parse(localStorage.getItem(`notas_alumno_${alumnoId}`) || '[]');
+    console.log('[notas] actualizando notas para alumno', alumnoId, 'notas encontradas:', notas.length);
+    
+    if (notas.length === 0) {
+      historialNotas.innerHTML = '<p class="text-sm muted">No hay notas guardadas para este alumno</p>';
+      return;
+    }
+    
+    const notasHTML = notas.map(nota => {
+      const fecha = new Date(nota.fecha).toLocaleString('es-ES');
+      return `
+        <div class="p-3 border rounded-md mb-2" style="border-color: var(--border)">
+          <div class="text-sm font-medium">${nota.adminEmail}</div>
+          <div class="text-sm mt-1">${nota.texto}</div>
+          <div class="text-xs muted mt-2">${fecha}</div>
+        </div>
+      `;
+    }).join('');
+    
+    historialNotas.innerHTML = notasHTML;
+    
+  } catch (error) {
+    console.warn('[notas] error actualizando notas:', error);
+    historialNotas.innerHTML = '<p class="text-sm text-red-500">Error al cargar notas</p>';
+  }
+}
+
+// Funcionalidad de notas para admin
+function initNotasFunctionality() {
+  console.log('[notas] 🔍 INICIANDO FUNCIONALIDAD DE NOTAS...');
+  
+  const btnGuardarNotas = document.getElementById('btn-guardar-notas');
+  const textareaNotas = document.getElementById('notas-alumno');
+  const historialNotas = document.getElementById('historial-notas');
+  
+  console.log('[notas] 🔍 elementos encontrados:', {
+    btnGuardarNotas: !!btnGuardarNotas,
+    textareaNotas: !!textareaNotas,
+    historialNotas: !!historialNotas
+  });
+  
+  if (!btnGuardarNotas || !textareaNotas) {
+    console.warn('[notas] ❌ elementos de notas no encontrados');
+    console.warn('[notas] 🔍 btnGuardarNotas:', btnGuardarNotas);
+    console.warn('[notas] 🔍 textareaNotas:', textareaNotas);
+    return;
+  }
+  
+  console.log('[notas] ✅ elementos encontrados, agregando event listener al botón de guardar notas');
+  
+  // Event listener para guardar notas
+  btnGuardarNotas.addEventListener('click', async () => {
+    console.log('[notas] 🎯 CLICK EN BOTÓN GUARDAR NOTAS');
+    console.log('[notas] 🔍 isUserAdmin:', isUserAdmin);
+    console.log('[notas] 🔍 currentUser:', currentUser);
+    
+    if (!isUserAdmin) {
+      console.warn('[notas] ❌ usuario no es admin');
+      alert('Solo los administradores pueden guardar notas');
+      return;
+    }
+    
+    const notaTexto = textareaNotas.value.trim();
+    console.log('[notas] 🔍 texto de la nota:', notaTexto);
+    
+    if (!notaTexto) {
+      console.warn('[notas] ❌ nota vacía');
+      alert('Por favor ingresa una nota antes de guardar');
+      return;
+    }
+    
+    try {
+      btnGuardarNotas.disabled = true;
+      btnGuardarNotas.textContent = 'Guardando...';
+      
+      // Obtener el ID del alumno actual
+      const alumnoId = window.currentAlumnoId;
+      if (!alumnoId) {
+        alert('Error: No se pudo identificar al alumno');
+        return;
+      }
+      
+      console.log('[notas] 🔍 guardando nota para alumno:', alumnoId);
+      
+      // Crear nueva nota
+      const nuevaNota = {
+        texto: notaTexto,
+        fecha: new Date().toISOString(),
+        adminEmail: currentUser?.email || 'admin',
+        alumnoId: alumnoId
+      };
+      
+      console.log('[notas] ✅ nueva nota creada:', nuevaNota);
+      
+      // Guardar en localStorage por alumno
+      const notasAlumno = JSON.parse(localStorage.getItem(`notas_alumno_${alumnoId}`) || '[]');
+      console.log('[notas] 🔍 notas existentes del alumno antes:', notasAlumno.length);
+      
+      notasAlumno.push(nuevaNota);
+      localStorage.setItem(`notas_alumno_${alumnoId}`, JSON.stringify(notasAlumno));
+      
+      console.log('[notas] ✅ nota guardada en localStorage para alumno, total:', notasAlumno.length);
+      
+      // Limpiar textarea
+      textareaNotas.value = '';
+      
+      // Actualizar historial
+      mostrarHistorialNotas();
+      
+      alert('Nota guardada exitosamente');
+      
+    } catch (error) {
+      console.error('[notas] ❌ error guardando:', error);
+      alert('Error al guardar la nota');
+    } finally {
+      btnGuardarNotas.disabled = false;
+      btnGuardarNotas.textContent = 'Guardar Notas';
+    }
+  });
+  
+  // Función para mostrar historial de notas del alumno actual
+  function mostrarHistorialNotas() {
+    if (!historialNotas) return;
+    
+    try {
+      const alumnoId = window.currentAlumnoId;
+      if (!alumnoId) {
+        historialNotas.innerHTML = '<p class="text-sm muted">Selecciona un alumno para ver sus notas</p>';
+        return;
+      }
+      
+      const notas = JSON.parse(localStorage.getItem(`notas_alumno_${alumnoId}`) || '[]');
+      console.log('[notas] mostrando historial para alumno', alumnoId, 'notas encontradas:', notas.length);
+      
+      if (notas.length === 0) {
+        historialNotas.innerHTML = '<p class="text-sm muted">No hay notas guardadas para este alumno</p>';
+        return;
+      }
+      
+      const notasHTML = notas.map(nota => {
+        const fecha = new Date(nota.fecha).toLocaleString('es-ES');
+        return `
+          <div class="p-3 border rounded-md mb-2" style="border-color: var(--border)">
+            <div class="text-sm font-medium">${nota.adminEmail}</div>
+            <div class="text-sm mt-1">${nota.texto}</div>
+            <div class="text-xs muted mt-2">${fecha}</div>
+          </div>
+        `;
+      }).join('');
+      
+      historialNotas.innerHTML = notasHTML;
+      
+    } catch (error) {
+      console.warn('[notas] error mostrando historial:', error);
+      historialNotas.innerHTML = '<p class="text-sm text-red-500">Error al cargar notas</p>';
+    }
+  }
+  
+  // Mostrar historial inicial
+  mostrarHistorialNotas();
+  
+  console.log('[notas] funcionalidad de notas inicializada correctamente');
+}
+
+// Actualizar UI de admin
 function updateAdminUI(isAdmin) {
-  // Considerar tanto admin de Firebase como admin local
-  const isAdminFromFirebase = isAdmin;
-  const isAdminFromLocal = isAdminLocal();
-  const shouldShowAdmin = isAdminFromFirebase || isAdminFromLocal;
+  console.log('[admin] 🔍 updateAdminUI llamado con isAdmin:', isAdmin);
+  
+  isUserAdmin = isAdmin;
+  console.log('[admin] 🔍 isUserAdmin actualizado a:', isUserAdmin);
   
   const header = document.getElementById('nav-admin-header');
   const group = document.getElementById('nav-admin');
   
+  console.log('[admin] 🔍 elementos encontrados:', {
+    header: !!header,
+    group: !!group
+  });
+  
   if (header && group) {
-    header.style.display = shouldShowAdmin ? '' : 'none';
-    group.style.display = shouldShowAdmin ? '' : 'none';
+    header.style.display = isAdmin ? '' : 'none';
+    group.style.display = isAdmin ? '' : 'none';
+    console.log('[admin] ✅ UI de admin actualizada');
   }
   
   // Asegurar que el botón de Alumnos esté disponible
-  if (shouldShowAdmin) {
+  if (isAdmin) {
+    console.log('[admin] 🔍 llamando ensureAlumnosNav');
     ensureAlumnosNav();
   }
-}
-
-// Mostrar/ocultar botón Links según admin (usando el nuevo sistema)
-function ensureLinksNavVisibility(){
-  // Esta función ahora se maneja desde updateAdminUI
-  // Solo se ejecuta al cargar la página
-  if (currentUser) {
-    checkUserAdminStatus(currentUser);
+  
+  // Mostrar/ocultar pestaña de Notas en el formulario
+  const notasTabBtn = document.getElementById('tab-notas-btn');
+  console.log('[admin] 🔍 pestaña notas encontrada:', !!notasTabBtn);
+  
+  if (notasTabBtn) {
+    notasTabBtn.classList.toggle('hidden', !isAdmin);
+    console.log('[admin] ✅ pestaña notas mostrada/ocultada');
+  }
+  
+  // Inicializar funcionalidad de notas solo si es admin
+  if (isAdmin) {
+    console.log('[admin] 🎯 INICIALIZANDO FUNCIONALIDAD DE NOTAS...');
+    initNotasFunctionality();
   } else {
-    // Si no hay usuario logueado, verificar admin local
-    updateAdminUI(false);
+    console.log('[admin] ❌ usuario no es admin, no se inicializa funcionalidad de notas');
   }
 }
-ensureLinksNavVisibility();
 
-// Sistema de Autenticación
+// Verificar si el usuario es admin
+async function checkUserAdminStatus(user) {
+  console.log('[auth] 🔍 checkUserAdminStatus llamado para usuario:', user?.email);
+  
+  if (!user) {
+    console.log('[auth] ❌ no hay usuario');
+    return false;
+  }
+  
+  try {
+    console.log('[auth] 🔍 consultando Firestore para uid:', user.uid);
+    const userRef = doc(db, 'usuarios', user.uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const isAdmin = userData.admin === true;
+      console.log('[auth] ✅ usuario encontrado en Firestore, admin:', isAdmin);
+      console.log('[auth] 🔍 datos del usuario:', userData);
+      
+      // Actualizar UI de admin
+      console.log('[auth] 🔍 llamando updateAdminUI con isAdmin:', isAdmin);
+      updateAdminUI(isAdmin);
+      return isAdmin;
+    } else {
+      console.log('[auth] ❌ usuario no encontrado en Firestore');
+      updateAdminUI(false);
+      return false;
+    }
+  } catch (error) {
+    console.error('[auth] ❌ error verificando admin:', error);
+    updateAdminUI(false);
+    return false;
+  }
+}
+
+// Verificar si el usuario ya tiene formulario
+async function checkUserHasForm(user) {
+  if (!user) return false;
+  
+  try {
+    const formQuery = query(
+      collection(db, 'formularios'),
+      where('ownerUid', '==', user.uid)
+    );
+    const formSnapshot = await getDocs(formQuery);
+    return !formSnapshot.empty;
+  } catch (error) {
+    console.warn('[auth] error verificando formulario:', error);
+    return false;
+  }
+}
+
+// Estado de autenticación
+async function updateAuthUI(user) {
+  currentUser = user;
+  
+  if (user) {
+    // Usuario logueado
+    const btnLogin = document.getElementById('btn-login');
+    const userInfo = document.getElementById('user-info');
+    const userEmail = document.getElementById('user-email');
+    
+    if (btnLogin) btnLogin.style.display = 'none';
+    if (userInfo) userInfo.style.display = 'flex';
+    
+    // Mostrar solo el nombre del usuario sin el dominio del email
+    if (userEmail) {
+      const displayName = user.displayName || user.email?.split('@')[0] || 'Usuario';
+      userEmail.textContent = displayName;
+    }
+    
+    // Mostrar la app
+    toggleAppVisibility(true);
+    
+    // Verificar si es admin
+    await checkUserAdminStatus(user);
+    
+    // Verificar si ya tiene formulario y cambiar sección por defecto
+    const hasForm = await checkUserHasForm(user);
+    if (hasForm) {
+      // Si ya tiene formulario, mostrar Videos por defecto
+      switchTo('videos');
+    } else {
+      // Si no tiene formulario, mostrar Formulario por defecto
+      switchTo('formulario');
+    }
+    
+  } else {
+    // Usuario no logueado
+    const btnLogin = document.getElementById('btn-login');
+    const userInfo = document.getElementById('user-info');
+    const userEmail = document.getElementById('user-email');
+    
+    if (btnLogin) btnLogin.style.display = 'block';
+    if (userInfo) userInfo.style.display = 'none';
+    if (userEmail) userEmail.textContent = '';
+    
+    isUserAdmin = false;
+    updateAdminUI(false);
+    
+    // Ocultar la app
+    toggleAppVisibility(false);
+  }
+}
+
+// Observar cambios en el estado de autenticación
+onAuthStateChanged(auth, async (user) => {
+  await updateAuthUI(user);
+  console.log('[auth] estado cambiado:', user ? user.email : 'no logueado');
+});
+
+// Sistema de autenticación
 (function initAuth() {
   const loginModal = document.getElementById('modal-login');
   const registerModal = document.getElementById('modal-register');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
   const btnLogin = document.getElementById('btn-login');
+  const btnLoginRequired = document.getElementById('btn-login-required');
   const btnLogout = document.getElementById('btn-logout');
-  const userInfo = document.getElementById('user-info');
-  const userEmail = document.getElementById('user-email');
-
-  // Verificar si el usuario es admin
-  async function checkUserAdminStatus(user) {
-    if (!user) return false;
-    
-    try {
-      // Buscar el perfil del usuario en Firestore
-      const userQuery = query(
-        collection(db, 'usuarios'),
-        where('uid', '==', user.uid)
-      );
-      const userSnapshot = await getDocs(userQuery);
-      
-      if (!userSnapshot.empty) {
-        const userData = userSnapshot.docs[0].data();
-        isUserAdmin = userData.admin === true;
-        console.log('[auth] usuario admin:', isUserAdmin);
-        
-        // Actualizar UI de admin
-        updateAdminUI(isUserAdmin);
-      } else {
-        isUserAdmin = false;
-        updateAdminUI(false);
-      }
-    } catch (error) {
-      console.warn('[auth] error verificando admin:', error);
-      isUserAdmin = false;
-      updateAdminUI(false);
-    }
-    
-    return isUserAdmin;
-  }
-
-
-
-  // Verificar si el usuario ya tiene formulario
-  async function checkUserHasForm(user) {
-    if (!user) return false;
-    
-    try {
-      const formQuery = query(
-        collection(db, 'formularios'),
-        where('email', '==', user.email)
-      );
-      const formSnapshot = await getDocs(formQuery);
-      return !formSnapshot.empty;
-    } catch (error) {
-      console.warn('[auth] error verificando formulario:', error);
-      return false;
-    }
-  }
-
-  // Verificar y cargar datos de alumno desde localStorage
-  function checkAndLoadAlumnoData() {
-    try {
-      const alumnoData = localStorage.getItem('fill_form_data');
-      if (alumnoData) {
-        const data = JSON.parse(alumnoData);
-        if (data && Object.keys(data).length > 0) {
-          // Cambiar a la sección del formulario
-          switchTo('formulario');
-          // Llenar el formulario con los datos del alumno
-          fillFormWithAlumnoData(data);
-          // Limpiar localStorage
-          localStorage.removeItem('fill_form_data');
-          console.log('[alumno] datos cargados en formulario:', data);
-        }
-      }
-    } catch (error) {
-      console.warn('[alumno] error cargando datos:', error);
-      localStorage.removeItem('fill_form_data');
-    }
-  }
-
-  // Llenar el formulario con datos del alumno
-  function fillFormWithAlumnoData(data) {
-    const form = document.getElementById('form-registro');
-    if (!form) return;
-
-    // Establecer el ID del alumno que se está editando
-    if (data.id && window.setCurrentAlumnoId) {
-      window.setCurrentAlumnoId(data.id);
-    }
-
-    // Mapear campos del formulario con los datos del alumno
-    const fieldMappings = {
-      'nombre': data.nombre,
-      'nacimiento': data.nacimiento,
-      'edad': data.edad,
-      'domicilio': data.domicilio,
-      'ciudad': data.ciudad,
-      'nacionalidad': data.nacionalidad,
-      'telefono': data.telefono,
-      'email': data.email,
-      'ocupacion': data.ocupacion,
-      'alergias': data.alergias,
-      'lesiones': data.lesiones,
-      'condicion': data.condicion,
-      'apto': data.apto,
-      'apto_vto': data.apto_vto,
-      'anios': data.anios,
-      'handicap': data.handicap,
-      'frecuencia': data.frecuencia,
-      'club': data.club,
-      'modalidad': data.modalidad,
-      'modalidad_otro': data.modalidad_otro,
-      'clases_previas': data.clases_previas
-    };
-
-    // Llenar cada campo del formulario
-    Object.entries(fieldMappings).forEach(([fieldName, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        const field = form.querySelector(`[name="${fieldName}"]`);
-        if (field) {
-          field.value = value;
-          
-          // Para campos select, verificar si la opción existe
-          if (field.tagName === 'SELECT') {
-            const option = field.querySelector(`option[value="${value}"]`);
-            if (option) {
-              field.value = value;
-            }
-          }
-        }
-      }
-    });
-
-    // Manejar campos especiales
-    if (data.modalidad === 'Otro' && data.modalidad_otro) {
-      const modalidadOtroRow = document.getElementById('modalidad-otro-row');
-      if (modalidadOtroRow) {
-        modalidadOtroRow.classList.remove('hidden');
-      }
-    }
-
-    // Calcular edad si hay fecha de nacimiento
-    if (data.nacimiento) {
-      const edadField = document.getElementById('edad');
-      if (edadField) {
-        const birthDate = new Date(data.nacimiento);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        edadField.value = age;
-      }
-    }
-  }
-
-  // Estado de autenticación
-  async function updateAuthUI(user) {
-    currentUser = user;
-    
-    if (user) {
-      // Usuario logueado
-      btnLogin.style.display = 'none';
-      userInfo.style.display = 'flex';
-      
-      // Mostrar solo el nombre del usuario sin el dominio del email
-      const displayName = user.displayName || user.email?.split('@')[0] || 'Usuario';
-      userEmail.textContent = displayName;
-      
-      // Mostrar la app
-      toggleAppVisibility(true);
-      
-      // Verificar si es admin
-      checkUserAdminStatus(user);
-      
-      // Verificar si ya tiene formulario y cambiar sección por defecto
-      const hasForm = await checkUserHasForm(user);
-      if (hasForm) {
-        // Si ya tiene formulario, mostrar Videos por defecto
-        switchTo('videos');
-      } else {
-        // Si no tiene formulario, mostrar Formulario por defecto
-        switchTo('formulario');
-      }
-      
-      // Verificar si hay datos de alumno para cargar (desde la página de alumnos)
-      checkAndLoadAlumnoData();
-      
-      // Guardar en localStorage si está marcado "recordarme"
-      const rememberMe = document.getElementById('login-remember')?.checked;
-      if (rememberMe) {
-        try { localStorage.setItem('auth_remember', '1'); } catch {}
-      }
+  
+  // Debug: verificar que los elementos se encuentren
+  console.log('[auth] elementos encontrados:', {
+    loginModal: !!loginModal,
+    registerModal: !!registerModal,
+    loginForm: !!loginForm,
+    registerForm: !!registerForm,
+    btnLogin: !!btnLogin,
+    btnLoginRequired: !!btnLoginRequired,
+    btnLogout: !!btnLogout
+  });
+  
+  // Función para mostrar modal de login
+  function showLoginModal() {
+    console.log('[auth] mostrando modal de login');
+    if (loginModal) {
+      loginModal.classList.remove('hidden');
+      console.log('[auth] modal de login mostrado');
     } else {
-      // Usuario no logueado
-      btnLogin.style.display = 'block';
-      userInfo.style.display = 'none';
-      userEmail.textContent = '';
-      isUserAdmin = false;
-      
-      // Limpiar admin local cuando no hay usuario logueado
-      setIsAdminLocal(false);
-      updateAdminUI(false);
-      
-      // Ocultar la app
-      toggleAppVisibility(false);
+      console.warn('[auth] modal de login no encontrado');
     }
+    window.lucide?.createIcons();
   }
-
-  // Observar cambios en el estado de autenticación
-  onAuthStateChanged(auth, async (user) => {
-    await updateAuthUI(user);
-    console.log('[auth] estado cambiado:', user ? user.email : 'no logueado');
-  });
-
-  // Mostrar modal de login
-  btnLogin?.addEventListener('click', () => {
-    loginModal.classList.remove('hidden');
-    window.lucide?.createIcons();
-  });
-
-  // Event listener para el botón de login obligatorio
-  document.getElementById('btn-login-required')?.addEventListener('click', () => {
-    document.getElementById('modal-login').classList.remove('hidden');
-    window.lucide?.createIcons();
-  });
+  
+  // Event listener para botón login del header
+  if (btnLogin) {
+    console.log('[auth] botón login del header encontrado, agregando event listener');
+    btnLogin.addEventListener('click', showLoginModal);
+  } else {
+    console.warn('[auth] botón login del header no encontrado');
+  }
+  
+  // Event listener para botón login del overlay
+  if (btnLoginRequired) {
+    console.log('[auth] botón login del overlay encontrado, agregando event listener');
+    btnLoginRequired.addEventListener('click', showLoginModal);
+  } else {
+    console.warn('[auth] botón login del overlay no encontrado');
+  }
 
   // Cerrar modales
   function closeModals() {
-    loginModal.classList.add('hidden');
-    registerModal.classList.add('hidden');
+    if (loginModal) loginModal.classList.add('hidden');
+    if (registerModal) registerModal.classList.add('hidden');
+    if (modalChangelog) modalChangelog.classList.add('hidden');
   }
 
   // Cerrar con overlay
@@ -517,20 +629,21 @@ ensureLinksNavVisibility();
 
   // Navegación entre modales
   document.getElementById('btn-show-register')?.addEventListener('click', () => {
-    loginModal.classList.add('hidden');
-    registerModal.classList.remove('hidden');
+    if (loginModal) loginModal.classList.add('hidden');
+    if (registerModal) registerModal.classList.remove('hidden');
     window.lucide?.createIcons();
   });
 
   document.getElementById('btn-show-login')?.addEventListener('click', () => {
-    registerModal.classList.add('hidden');
-    loginModal.classList.remove('hidden');
+    if (registerModal) registerModal.classList.add('hidden');
+    if (loginModal) loginModal.classList.remove('hidden');
     window.lucide?.createIcons();
   });
 
   // Login con email/password
   loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
     const submitBtn = loginForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     
@@ -542,16 +655,16 @@ ensureLinksNavVisibility();
       const password = document.getElementById('login-password').value;
       
       await signInWithEmailAndPassword(auth, email, password);
-      closeModals();
-      alert('¡Bienvenido!');
+      console.log('[auth] login exitoso:', email);
       
+      closeModals();
     } catch (error) {
       console.error('[auth] error login:', error);
       let message = 'Error al iniciar sesión';
       
       switch (error.code) {
         case 'auth/user-not-found':
-          message = 'No existe una cuenta con este email';
+          message = 'Usuario no encontrado';
           break;
         case 'auth/wrong-password':
           message = 'Contraseña incorrecta';
@@ -560,7 +673,7 @@ ensureLinksNavVisibility();
           message = 'Email inválido';
           break;
         case 'auth/too-many-requests':
-          message = 'Demasiados intentos fallidos. Intenta más tarde';
+          message = 'Demasiados intentos. Intenta más tarde';
           break;
       }
       
@@ -574,14 +687,14 @@ ensureLinksNavVisibility();
   // Registro con email/password
   registerForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
     const submitBtn = registerForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     
     try {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Creando cuenta...';
+      submitBtn.textContent = 'Creando...';
       
-      const name = document.getElementById('register-name').value.trim();
       const email = document.getElementById('register-email').value.trim();
       const password = document.getElementById('register-password').value;
       const confirmPassword = document.getElementById('register-confirm-password').value;
@@ -598,13 +711,14 @@ ensureLinksNavVisibility();
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Guardar nombre del usuario en Firestore
+      // Crear documento de usuario en Firestore
       try {
-        await addDoc(collection(db, 'usuarios'), {
+        const userDoc = doc(db, 'usuarios', userCredential.user.uid);
+        await setDoc(userDoc, {
           uid: userCredential.user.uid,
-          nombre: name,
           email: email,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          admin: false // Por defecto no es admin
         });
       } catch (e) {
         console.warn('[auth] error guardando perfil:', e);
@@ -640,32 +754,35 @@ ensureLinksNavVisibility();
   document.getElementById('btn-login-google')?.addEventListener('click', async () => {
     try {
       const provider = new GoogleAuthProvider();
-      
-      // Configurar persistencia automática para Google
-      await setPersistence(auth, browserLocalPersistence);
-      
       const result = await signInWithPopup(auth, provider);
       
-      // Crear perfil de usuario en Firestore si no existe
-      const userDoc = doc(db, 'usuarios', result.user.uid);
-      const userSnap = await getDoc(userDoc);
-      
-      if (!userSnap.exists()) {
-        await setDoc(userDoc, {
-          uid: result.user.uid,
-          email: result.user.email,
-          nombre: result.user.displayName || '',
-          createdAt: serverTimestamp(),
-          admin: false // Por defecto no es admin
-        });
+      // Crear documento de usuario en Firestore si no existe
+      try {
+        const userDoc = doc(db, 'usuarios', result.user.uid);
+        const userSnap = await getDoc(userDoc);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userDoc, {
+            uid: result.user.uid,
+            email: result.user.email,
+            nombre: result.user.displayName || '',
+            createdAt: serverTimestamp(),
+            admin: false // Por defecto no es admin
+          });
+        }
+        
+        closeModals();
+        console.log('[auth] login con Google exitoso');
+      } catch (error) {
+        console.error('[auth] error google login:', error);
+        if (error.code === 'auth/popup-closed-by-user') {
+          return;
+        }
+        alert('Error al iniciar sesión con Google');
       }
-      
-      closeModals();
-      console.log('[auth] login con Google exitoso (persistencia automática)');
     } catch (error) {
       console.error('[auth] error google login:', error);
       if (error.code === 'auth/popup-closed-by-user') {
-        // Usuario cerró el popup, no mostrar error
         return;
       }
       alert('Error al iniciar sesión con Google');
@@ -676,11 +793,6 @@ ensureLinksNavVisibility();
   btnLogout?.addEventListener('click', async () => {
     try {
       await signOut(auth);
-      
-      // Limpiar admin local al cerrar sesión
-      setIsAdminLocal(false);
-      updateAdminUI(false);
-      
       alert('Sesión cerrada');
     } catch (error) {
       console.error('[auth] error logout:', error);
@@ -707,8 +819,8 @@ ensureLinksNavVisibility();
 
   // Limpiar formularios al cerrar modales
   function clearForms() {
-    loginForm?.reset();
-    registerForm?.reset();
+    if (loginForm) loginForm.reset();
+    if (registerForm) registerForm.reset();
   }
   
   // Limpiar al cerrar
@@ -716,439 +828,421 @@ ensureLinksNavVisibility();
   document.getElementById('btn-close-register')?.addEventListener('click', clearForms);
   document.getElementById('modal-login-overlay')?.addEventListener('click', clearForms);
   document.getElementById('modal-register-overlay')?.addEventListener('click', clearForms);
-
-  // Función para hacer admin a un usuario (solo para desarrollo/testing)
-  window.makeUserAdmin = async function(email) {
-    if (!currentUser) {
-      alert('Debes estar logueado para usar esta función');
-      return;
-    }
+  
+  // Modal de changelog
+  const btnChangelog = document.getElementById('btn-changelog');
+  const modalChangelog = document.getElementById('modal-changelog');
+  
+  if (btnChangelog && modalChangelog) {
+    btnChangelog.addEventListener('click', () => {
+      modalChangelog.classList.remove('hidden');
+      window.lucide?.createIcons();
+    });
     
-    try {
-      // Buscar usuario por email
-      const userQuery = query(
-        collection(db, 'usuarios'), 
-        where('email', '==', email)
-      );
-      const userSnapshot = await getDocs(userQuery);
-      
-      if (userSnapshot.empty) {
-        alert('Usuario no encontrado');
-        return;
-      }
-      
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
-      
-      // Actualizar el campo admin
-      await updateDoc(userDoc.ref, { admin: true });
-      
-      // Si es el usuario actual, actualizar la UI
-      if (userData.uid === currentUser.uid) {
-        isUserAdmin = true;
-        updateAdminUI(true);
-      }
-      
-      alert(`Usuario ${email} ahora es admin`);
-      
-    } catch (error) {
-      console.error('[auth] error haciendo admin:', error);
-      alert('Error al hacer admin al usuario');
-    }
-  };
+    // Cerrar modal de changelog
+    document.getElementById('btn-close-changelog')?.addEventListener('click', () => {
+      modalChangelog.classList.add('hidden');
+    });
+    
+    document.getElementById('modal-changelog-overlay')?.addEventListener('click', () => {
+      modalChangelog.classList.add('hidden');
+    });
+  }
 
   console.log('[auth] sistema inicializado');
 })();
 
-// Modal del changelog
-(function initChangelog() {
-  const changelogModal = document.getElementById('modal-changelog');
-  const btnChangelog = document.getElementById('btn-changelog');
-  const btnCloseChangelog = document.getElementById('btn-close-changelog');
-  const changelogOverlay = document.getElementById('modal-changelog-overlay');
-
-  // Abrir modal del changelog
-  btnChangelog?.addEventListener('click', () => {
-    changelogModal.classList.remove('hidden');
-    window.lucide?.createIcons();
-  });
-
-  // Cerrar modal del changelog
-  function closeChangelogModal() {
-    changelogModal.classList.add('hidden');
-  }
-
-  // Cerrar con botón X
-  btnCloseChangelog?.addEventListener('click', closeChangelogModal);
-
-  // Cerrar con overlay
-  changelogOverlay?.addEventListener('click', closeChangelogModal);
-
-  // Cerrar con Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !changelogModal.classList.contains('hidden')) {
-      closeChangelogModal();
+// Tabs con animación
+const tabs = ['tab-personales','tab-medica','tab-experiencia','tab-notas'];
+let currentTabIndex = 0;
+function showTab(i){
+  currentTabIndex = Math.max(0, Math.min(tabs.length-1, i));
+  tabs.forEach((id,idx)=>{ 
+    const tabElement = document.getElementById(id);
+    if (tabElement) {
+      tabElement.classList.toggle('hidden', idx!==currentTabIndex);
     }
   });
-
-  console.log('[changelog] sistema inicializado');
-})();
-
-// Sistema de Pantalla Completa
-(function initFullscreen() {
-  const fullscreenBtn = document.getElementById('btn-fullscreen');
-  const fullscreenDrawerBtn = document.getElementById('btn-fullscreen-drawer');
+  document.querySelectorAll('.tab-btn').forEach((b,idx)=>b.setAttribute('aria-selected', String(idx===currentTabIndex)));
+  const shown=document.getElementById(tabs[currentTabIndex]);
+  if (shown) { shown.classList.remove('fade-in'); void shown.offsetWidth; shown.classList.add('fade-in'); }
   
-  // Función para verificar si la pantalla completa está soportada
-  function isFullscreenSupported() {
-    return document.fullscreenEnabled || 
-           document.webkitFullscreenEnabled || 
-           document.mozFullScreenEnabled || 
-           document.msFullscreenEnabled;
-  }
-  
-  // Función para verificar si está en pantalla completa
-  function isFullscreen() {
-    return !!(document.fullscreenElement || 
-              document.webkitFullscreenElement || 
-              document.mozFullScreenElement || 
-              document.msFullscreenElement);
-  }
-  
-  // Función para activar pantalla completa
-  async function enterFullscreen() {
-    try {
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      } else if (document.documentElement.webkitRequestFullscreen) {
-        await document.documentElement.webkitRequestFullscreen();
-      } else if (document.documentElement.mozRequestFullScreen) {
-        await document.documentElement.mozRequestFullScreen();
-      } else if (document.documentElement.msRequestFullscreen) {
-        await document.documentElement.msRequestFullscreen();
-      }
-    } catch (error) {
-      console.warn('[fullscreen] error al activar pantalla completa:', error);
-    }
-  }
-  
-  // Función para salir de pantalla completa
-  async function exitFullscreen() {
-    try {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        await document.mozCancelFullScreen();
-      } else if (document.msExitFullscreen) {
-        await document.msExitFullscreen();
-      }
-    } catch (error) {
-      console.warn('[fullscreen] error al salir de pantalla completa:', error);
-    }
-  }
-  
-  // Función para alternar pantalla completa
-  async function toggleFullscreen() {
-    if (isFullscreen()) {
-      await exitFullscreen();
-    } else {
-      await enterFullscreen();
-    }
-  }
-  
-  // Función para actualizar los iconos de los botones
-  function updateFullscreenIcons() {
-    const isFullscreenMode = isFullscreen();
-    
-    // Actualizar botón del header
-    if (fullscreenBtn) {
-      const icon = fullscreenBtn.querySelector('i');
-      if (icon) {
-        icon.className = isFullscreenMode ? 'lucide lucide-minimize-2' : 'lucide lucide-maximize-2';
-      }
-    }
-    
-    // Actualizar botón del drawer
-    if (fullscreenDrawerBtn) {
-      const icon = fullscreenDrawerBtn.querySelector('i');
-      const textSpan = fullscreenDrawerBtn.querySelector('span');
-      if (icon) {
-        icon.className = isFullscreenMode ? 'lucide lucide-minimize-2' : 'lucide lucide-maximize-2';
-      }
-      if (textSpan) {
-        textSpan.textContent = isFullscreenMode ? 'Salir Pantalla Completa' : 'Pantalla Completa';
-      }
-    }
-  }
-  
-  // Event listener para el botón de pantalla completa del header
-  if (fullscreenBtn) {
-    fullscreenBtn.addEventListener('click', toggleFullscreen);
-    
-    // Verificar si la pantalla completa está soportada
-    if (!isFullscreenSupported()) {
-      fullscreenBtn.style.display = 'none';
-      console.warn('[fullscreen] pantalla completa no soportada en este navegador');
-    }
-  }
-  
-  // Event listener para el botón de pantalla completa del drawer
-  if (fullscreenDrawerBtn) {
-    fullscreenDrawerBtn.addEventListener('click', toggleFullscreen);
-    
-    // Verificar si la pantalla completa está soportada
-    if (!isFullscreenSupported()) {
-      fullscreenDrawerBtn.style.display = 'none';
-      console.warn('[fullscreen] pantalla completa no soportada en este navegador');
-    }
-  }
-  
-  // Event listeners para cambios de pantalla completa
-  document.addEventListener('fullscreenchange', updateFullscreenIcons);
-  document.addEventListener('webkitfullscreenchange', updateFullscreenIcons);
-  document.addEventListener('mozfullscreenchange', updateFullscreenIcons);
-  document.addEventListener('MSFullscreenChange', updateFullscreenIcons);
-  
-  // Salir de pantalla completa con Escape (opcional)
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isFullscreen()) {
-      exitFullscreen();
-    }
-  });
-  
-  console.log('[fullscreen] sistema inicializado');
-})();
-
-// Sistema del Formulario
-(function initFormulario() {
-  const form = document.getElementById('form-registro');
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabs = ['tab-personales', 'tab-medica', 'tab-experiencia', 'tab-notas'];
+  // Mostrar/ocultar botones según la pestaña
   const btnPrev = document.getElementById('btn-prev');
   const btnNext = document.getElementById('btn-next');
-  const modalidadSelect = document.querySelector('select[name="modalidad"]');
-  const modalidadOtroRow = document.getElementById('modalidad-otro-row');
-  const aptoFileInput = document.getElementById('apto_file');
-  const aptoFileName = document.getElementById('apto_file_name');
-  const nacimientoInput = document.querySelector('input[name="nacimiento"]');
-  const edadInput = document.getElementById('edad');
-
-  let currentTabIndex = 0;
-  let currentAlumnoId = null; // Para saber si estamos editando un alumno existente
-
-  // Navegación entre pestañas
-  function showTab(index) {
-    tabs.forEach((tab, i) => {
-      const tabElement = document.getElementById(tab);
-      if (tabElement) {
-        tabElement.classList.toggle('hidden', i !== index);
-      }
-    });
-    
-    // Actualizar botones
-    if (btnPrev) btnPrev.style.display = index === 0 ? 'none' : 'block';
-    if (btnNext) btnNext.style.display = index === tabs.length - 1 ? 'none' : 'block';
-    
-    // Actualizar estado de botones de pestaña
-    tabBtns.forEach((btn, i) => {
-      btn.setAttribute('aria-selected', i === index);
-    });
-    
-    currentTabIndex = index;
-  }
-
-  // Event listeners para botones de pestaña
-  tabBtns.forEach((btn, index) => {
-    btn.addEventListener('click', () => showTab(index));
-  });
-
-  // Botones anterior/siguiente
-  btnPrev?.addEventListener('click', () => {
-    if (currentTabIndex > 0) showTab(currentTabIndex - 1);
-  });
-
-  btnNext?.addEventListener('click', () => {
-    if (currentTabIndex < tabs.length - 1) showTab(currentTabIndex + 1);
-  });
-
-  // Manejo de modalidad "Otro"
-  modalidadSelect?.addEventListener('change', (e) => {
-    if (modalidadOtroRow) {
-      modalidadOtroRow.classList.toggle('hidden', e.target.value !== 'Otro');
-    }
-  });
-
-  // Manejo de archivo de apto médico
-  aptoFileInput?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      aptoFileName.textContent = file.name;
-    } else {
-      aptoFileName.textContent = 'Seleccionar Archivo';
-    }
-  });
-
-  // Cálculo automático de edad
-  nacimientoInput?.addEventListener('change', (e) => {
-    if (e.target.value && edadInput) {
-      const birthDate = new Date(e.target.value);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      edadInput.value = age;
-    }
-  });
-
-  // Función para mostrar/ocultar pestaña de notas según rol de admin
-  function toggleNotasTab(isAdmin) {
-    const notasTabBtn = document.getElementById('tab-notas-btn');
-    if (notasTabBtn) {
-      notasTabBtn.classList.toggle('hidden', !isAdmin);
-    }
-  }
-
-  // Event listener para guardar notas
-  const btnGuardarNotas = document.getElementById('btn-guardar-notas');
-  btnGuardarNotas?.addEventListener('click', async () => {
-    const notasTextarea = document.getElementById('notas-alumno');
-    const notas = notasTextarea.value.trim();
-    
-    if (!notas) {
-      alert('Por favor, escribe alguna nota antes de guardar.');
-      return;
-    }
-
-    if (!currentAlumnoId) {
-      alert('No hay un alumno seleccionado para guardar notas.');
-      return;
-    }
-
-    try {
-      btnGuardarNotas.disabled = true;
-      btnGuardarNotas.textContent = 'Guardando...';
-
-      // Asegurar autenticación
-      const user = await ensureAuth();
-      if (!user) {
-        throw new Error('No se pudo autenticar.');
-      }
-
-      // Verificar que sea admin
-      const isAdmin = await checkUserRole(user);
-      if (!isAdmin) {
-        throw new Error('Solo los administradores pueden guardar notas.');
-      }
-
-      // Crear nueva entrada de notas
-      const nuevaNota = {
-        texto: notas,
-        fecha: serverTimestamp(),
-        adminUid: user.uid,
-        adminEmail: user.email || 'admin@local'
-      };
-
-      // Agregar la nota al historial del alumno
-      const alumnoRef = doc(db, 'formularios', currentAlumnoId);
-      await updateDoc(alumnoRef, {
-        notas: arrayUnion(nuevaNota),
-        notas_ultima_actualizacion: serverTimestamp()
-      });
-
-      // Limpiar textarea y actualizar UI
-      notasTextarea.value = '';
-      await cargarNotasAlumno(currentAlumnoId);
-      
-      btnGuardarNotas.textContent = 'Guardado ✓';
-      setTimeout(() => {
-        btnGuardarNotas.textContent = 'Guardar Notas';
-      }, 2000);
-
-      console.log('[notas] nota guardada exitosamente');
-    } catch (error) {
-      console.error('[notas] error guardando:', error);
-      alert('Error al guardar notas: ' + error.message);
-    } finally {
-      btnGuardarNotas.disabled = false;
-      btnGuardarNotas.textContent = 'Guardar Notas';
-    }
-  });
-
-  // Envío del formulario
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
-      
-      // Asegurar autenticación antes de escribir
-      const user = await ensureAuth();
-      if (!user) {
-        throw new Error('No se pudo autenticar. Verifica tu conexión.');
-      }
-      
-      // Recopilar datos del formulario
-      const formData = new FormData(form);
-      const data = {};
-      
-      // Convertir FormData a objeto, excluyendo archivos
-      for (let [key, value] of formData.entries()) {
-        // Excluir campos de archivo y valores vacíos
-        if (value !== '' && key !== 'apto_file' && !(value instanceof File)) {
-          data[key] = value;
-        }
-      }
-      
-      // Atribuir propietario del formulario para reglas de seguridad
-      data.ownerUid = user.uid;
-      
-      // Agregar timestamps del servidor
-      data.updatedAt = serverTimestamp();
-      
-      // Si estamos editando un alumno existente, usar updateDoc
-      if (currentAlumnoId) {
-        const alumnoRef = doc(db, 'formularios', currentAlumnoId);
-        await updateDoc(alumnoRef, data);
-        console.log('[formulario] alumno actualizado:', currentAlumnoId);
-        alert('Alumno actualizado exitosamente');
-      } else {
-        // Nuevo registro
-        data.createdAt = serverTimestamp();
-        const docRef = await addDoc(collection(db, 'formularios'), data);
-        console.log('[formulario] nuevo alumno creado:', docRef.id);
-        alert('Alumno registrado exitosamente');
-      }
-      
-      // Limpiar formulario y resetear
-      form.reset();
-      currentAlumnoId = null;
-      showTab(0);
-      
-    } catch (error) {
-      console.error('[formulario] error guardando:', error);
-      alert('Error al guardar. Por favor intenta nuevamente.');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
-    }
-  });
-
-  // Función para establecer el ID del alumno que se está editando
-  window.setCurrentAlumnoId = function(id) {
-    currentAlumnoId = id;
-    console.log('[formulario] editando alumno:', id);
-  };
-
-  // Inicializar primera pestaña
-  showTab(0);
+  const btnGuardar = document.getElementById('btn-guardar');
   
-  console.log('[formulario] sistema inicializado');
+  if (btnPrev && btnNext && btnGuardar) {
+    if (currentTabIndex === 0) {
+      // Primera pestaña: solo Siguiente
+      btnPrev.style.display = 'none';
+      btnNext.style.display = 'block';
+      btnGuardar.style.display = 'none';
+    } else if (currentTabIndex === 1) {
+      // Segunda pestaña: Anterior y Siguiente
+      btnPrev.style.display = 'block';
+      btnNext.style.display = 'block';
+      btnGuardar.style.display = 'none';
+    } else if (currentTabIndex === 2) {
+      // Tercera pestaña: Anterior y Guardar
+      btnPrev.style.display = 'block';
+      btnNext.style.display = 'none';
+      btnGuardar.style.display = 'block';
+    } else if (currentTabIndex === 3) {
+      // Pestaña de Notas: solo Anterior
+      btnPrev.style.display = 'block';
+      btnNext.style.display = 'none';
+      btnGuardar.style.display = 'none';
+    }
+  }
+}
+
+// Hacer funciones globalmente accesibles
+window.showTab = showTab;
+window.actualizarNotasAlumno = actualizarNotasAlumno;
+window.renderVideos = renderVideos;
+
+document.querySelectorAll('.tab-btn').forEach((b,i)=>b.addEventListener('click',()=>showTab(i)));
+document.getElementById('btn-prev')?.addEventListener('click',()=>showTab(currentTabIndex-1));
+document.getElementById('btn-next')?.addEventListener('click',()=>showTab(currentTabIndex+1));
+
+// Links YouTube
+const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
+const elGrid = document.getElementById('links-grid');
+const elSearch = document.getElementById('links-search');
+const elTag = document.getElementById('links-tag');
+const elOrder = document.getElementById('links-order');
+
+function youtubeId(url){ 
+  try{ 
+    const u=new URL(url); 
+    if(u.hostname.includes('youtu.be')) return u.pathname.slice(1); 
+    if(u.searchParams.get('v')) return u.searchParams.get('v'); 
+    const p=u.pathname.split('/'); 
+    const i=p.indexOf('embed'); 
+    if(i>=0&&p[i+1]) return p[i+1]; 
+    return ''; 
+  } catch { 
+    return ''; 
+  } 
+}
+
+function renderLinks(){
+  // Verificar que los elementos existen antes de usarlos
+  if (!elGrid) {
+    console.warn('[links] elementos de links no encontrados');
+    return;
+  }
+  
+  let items=[...state.links];
+  
+  // Solo procesar búsqueda si el elemento existe
+  if (elSearch) {
+    const q = elSearch.value.trim().toLowerCase();
+    if(q) items = items.filter(it => (it.title||'').toLowerCase().includes(q) || (it.url||'').toLowerCase().includes(q));
+  }
+  
+  // Solo procesar filtro por tag si el elemento existe
+  if (elTag) {
+    const tag = elTag.value;
+    if(tag) items = items.filter(it => (it.tags||[]).includes(tag));
+  }
+  
+  // Solo procesar orden si el elemento existe
+  if (elOrder) {
+    if(elOrder.value==='date_desc') {
+      items.sort((a,b)=>b.createdAt-a.createdAt); 
+    } else {
+      items.sort((a,b)=>a.createdAt-b.createdAt);
+    }
+  }
+  
+  // Actualizar tags solo si el elemento existe
+  if (elTag) {
+    const tags = new Set(items.flatMap(it=>it.tags||[]));
+    const prev = elTag.value;
+    elTag.innerHTML = '<option value="">Todas las etiquetas</option>' + 
+      [...tags].map(t=>`<option ${t===prev?'selected':''} value="${t}">${t}</option>`).join('');
+  }
+  
+  // Renderizar grid
+  elGrid.innerHTML = items.map(it=>{
+    const id = youtubeId(it.url);
+    const thumb = id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
+    return `<article class="link-card fade-in">
+      <img class="thumb mb-2" src="${thumb}" alt="${it.title||'Video'}"/>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-medium truncate">${it.title||'Video de YouTube'}</div>
+          <div class="text-sm muted truncate">${new URL(it.url).hostname}</div>
+          ${it.tags?.length ? `<div class="mt-1">${it.tags.map(t=>`<span class="chip">${t}</span>`).join(' ')}</div>` : ''}
+        </div>
+        <div class="shrink-0 flex gap-2">
+          <button class="p-2 rounded-md border btn" style="border-color: var(--border)" data-act="open" data-id="${it.id}" title="Abrir">
+            <i data-lucide="external-link"></i>
+          </button>
+          <button class="p-2 rounded-md border btn" style="border-color: var(--border)" data-act="copy" data-id="${it.id}" title="Copiar URL">
+            <i data-lucide="copy"></i>
+          </button>
+          <button class="p-2 rounded-md border btn" style="border-color: var(--border)" data-act="del" data-id="${it.id}" title="Eliminar">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+  
+  window.lucide?.createIcons();
+  
+  // Agregar event listeners a los botones
+  elGrid.querySelectorAll('button[data-act]').forEach(btn=>{
+    const id = btn.getAttribute('data-id');
+    const act = btn.getAttribute('data-act');
+    const item = state.links.find(x=>String(x.id)===String(id));
+    if(!item) return;
+    
+    btn.addEventListener('click', async()=>{
+      if(act==='open') window.open(item.url,'_blank');
+      if(act==='copy') await navigator.clipboard.writeText(item.url);
+      if(act==='del'){
+        state.links = state.links.filter(x=>x.id!==item.id);
+        localStorage.setItem('yt_links', JSON.stringify(state.links));
+        renderLinks();
+      }
+    });
+  });
+}
+
+// Agregar nuevo link (solo para admin)
+const btnAddLink = document.getElementById('btn-add-link');
+if (btnAddLink) {
+  btnAddLink.addEventListener('click', () => {
+    if (!isUserAdmin) {
+      alert('Solo los administradores pueden agregar videos');
+      return;
+    }
+    
+    const url = prompt('Ingresa la URL del video de YouTube:');
+    if (!url) return;
+    
+    const title = prompt('Ingresa el título del video:');
+    if (!title) return;
+    
+    const tags = prompt('Ingresa las etiquetas separadas por coma:');
+    const tagsArray = tags ? tags.split(',').map(t => t.trim()).filter(t => t) : [];
+    
+    const newLink = {
+      id: Date.now(),
+      url: url,
+      title: title,
+      tags: tagsArray,
+      createdAt: Date.now()
+    };
+    
+    state.links.push(newLink);
+    localStorage.setItem('yt_links', JSON.stringify(state.links));
+    renderLinks();
+  });
+}
+
+// Inicializar
+showTab(0);
+
+// Solo inicializar links si los elementos existen
+if (elGrid) {
+  renderLinks();
+  
+  // Agregar event listeners solo si los elementos existen
+  if (elSearch) elSearch.addEventListener('input', renderLinks);
+  if (elTag) elTag.addEventListener('change', renderLinks);
+  if (elOrder) elOrder.addEventListener('change', renderLinks);
+}
+
+// Inicializar videos para usuarios comunes
+setTimeout(() => {
+  initVideosSection();
+}, 100);
+
+// Completar formulario si hay datos
+fillFormFromLocalStorage();
+
+// Función para inicializar la sección de videos
+function initVideosSection() {
+  console.log('[videos] 🔍 initVideosSection llamado');
+  
+  const videosGrid = document.getElementById('videos-grid');
+  console.log('[videos] 🔍 videosGrid encontrado:', !!videosGrid);
+  
+  if (videosGrid) {
+    console.log('[videos] ✅ videosGrid encontrado, llamando renderVideos');
+    renderVideos();
+  } else {
+    console.warn('[videos] ❌ videosGrid no encontrado, no se pueden renderizar videos');
+  }
+}
+
+// Función para renderizar videos (solo lectura para usuarios comunes)
+function renderVideos() {
+  console.log('[videos] 🔍 renderVideos llamado');
+  
+  const videosGrid = document.getElementById('videos-grid');
+  console.log('[videos] 🔍 videosGrid encontrado:', !!videosGrid);
+  
+  if (!videosGrid) {
+    console.warn('[videos] ❌ videosGrid no encontrado');
+    return;
+  }
+  
+  try {
+    const videos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+    console.log('[videos] ✅ videos encontrados en localStorage:', videos.length);
+    console.log('[videos] 🔍 contenido de videos:', videos);
+    
+    if (videos.length === 0) {
+      console.log('[videos] 📝 no hay videos, mostrando mensaje');
+      videosGrid.innerHTML = '<p class="text-sm muted text-center py-8">No hay videos disponibles</p>';
+      return;
+    }
+    
+    console.log('[videos] 🎬 renderizando', videos.length, 'videos');
+    
+    const videosHTML = videos.map(video => {
+      const id = youtubeId(video.url);
+      const thumb = id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
+      console.log('[videos] 🔍 video:', { title: video.title, url: video.url, id: id, thumb: thumb });
+      
+      return `<article class="link-card fade-in">
+        <img class="thumb mb-2" src="${thumb}" alt="${video.title || 'Video'}" />
+        <div class="min-w-0">
+          <div class="font-medium truncate mb-2">${video.title || 'Video de YouTube'}</div>
+          <div class="text-sm muted truncate mb-2">${new URL(video.url).hostname}</div>
+          ${video.tags?.length ? `<div class="mb-2">${video.tags.map(t => `<span class="chip">${t}</span>`).join(' ')}</div>` : ''}
+          <button class="w-full px-3 py-2 rounded-md border btn text-sm" style="border-color: var(--border)" onclick="window.open('${video.url}', '_blank')">
+            <i data-lucide="play" class="w-4 h-4 inline mr-2"></i>Ver Video
+          </button>
+        </div>
+      </article>`;
+    }).join('');
+    
+    videosGrid.innerHTML = videosHTML;
+    console.log('[videos] ✅ HTML renderizado en videosGrid');
+    
+    // Crear iconos Lucide
+    window.lucide?.createIcons();
+    console.log('[videos] ✅ iconos Lucide creados');
+    
+  } catch (error) {
+    console.error('[videos] ❌ error renderizando videos:', error);
+    videosGrid.innerHTML = '<p class="text-sm text-red-500 text-center py-8">Error al cargar videos: ' + error.message + '</p>';
+  }
+}
+
+console.log('[app] sistema inicializado');
+
+// Sistema de videos para usuarios comunes funcionando correctamente
+
+// Generador de QR
+(function initQR() {
+  const btnGenQR = document.getElementById('btn-gen-qr');
+  const qrCanvas = document.getElementById('qr-canvas');
+  const qrUrlInput = document.getElementById('qr-url');
+  const btnShareQR = document.getElementById('btn-share-qr');
+  
+  if (!btnGenQR || !qrCanvas || !qrUrlInput) {
+    console.warn('[qr] elementos de QR no encontrados');
+    return;
+  }
+  
+  console.log('[qr] inicializando generador de QR');
+  
+  // Función para generar QR
+  function generateQR() {
+    const url = qrUrlInput.value.trim();
+    if (!url) {
+      alert('Por favor ingresa una URL válida');
+      return;
+    }
+    
+    try {
+      // Limpiar canvas
+      const ctx = qrCanvas.getContext('2d');
+      ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+      
+             // Generar QR usando la librería QRCode
+       QRCode.toCanvas(qrCanvas, url, {
+         width: 300,
+         margin: 4,
+         color: {
+           dark: '#22c55e',  // Color verde del tema
+           light: '#0b1020'  // Color de fondo del tema
+         }
+       }, function (error) {
+        if (error) {
+          console.error('[qr] error generando QR:', error);
+          alert('Error al generar el código QR');
+        } else {
+          console.log('[qr] QR generado exitosamente para:', url);
+          // Habilitar botón de compartir
+          if (btnShareQR) {
+            btnShareQR.disabled = false;
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('[qr] error inesperado:', error);
+      alert('Error inesperado al generar QR');
+    }
+  }
+  
+  // Event listener para generar QR
+  btnGenQR.addEventListener('click', generateQR);
+  
+  // Event listener para generar QR con Enter
+  qrUrlInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      generateQR();
+    }
+  });
+  
+  // Función para compartir QR
+  if (btnShareQR) {
+    btnShareQR.addEventListener('click', async () => {
+      try {
+        // Convertir canvas a blob
+        qrCanvas.toBlob(async (blob) => {
+          if (navigator.share && blob) {
+            // Usar Web Share API si está disponible
+            const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+            await navigator.share({
+              title: 'Código QR',
+              text: 'Código QR generado',
+              files: [file]
+            });
+          } else {
+            // Fallback: descargar imagen
+            const link = document.createElement('a');
+            link.download = 'qr-code.png';
+            link.href = qrCanvas.toDataURL();
+            link.click();
+          }
+        }, 'image/png');
+      } catch (error) {
+        console.error('[qr] error compartiendo:', error);
+        alert('Error al compartir el código QR');
+      }
+    });
+    
+    // Deshabilitar botón inicialmente
+    btnShareQR.disabled = true;
+  }
+  
+  // Generar QR inicial con la URL por defecto
+  setTimeout(() => {
+    if (qrUrlInput.value) {
+      generateQR();
+    }
+  }, 500);
+  
+  console.log('[qr] generador de QR inicializado');
 })();

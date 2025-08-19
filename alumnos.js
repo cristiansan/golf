@@ -1,6 +1,6 @@
 // Página de Alumnos: lista documentos de 'formularios' ordenados por nombre
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -17,24 +17,32 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
-async function ensureAuth(){
-  if (auth.currentUser) return auth.currentUser;
-  const cred = await signInAnonymously(auth);
-  return cred.user;
-}
+// Variables globales para el estado de admin
+let currentUser = null;
+let isUserAdmin = false;
 
-const ADMIN_CONFIG_REF = doc(db, 'config', 'admin');
-function isSha256Hex(s){ return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(String(s).trim()); }
-async function fetchAdminKeyFromFirebase(){
+// Verificar si el usuario es admin desde Firestore
+async function checkUserAdminStatus(user) {
+  if (!user) return false;
+  
   try {
-    const snap = await getDoc(ADMIN_CONFIG_REF);
-    if (!snap.exists()) return '';
-    const data = snap.data() || {};
-    return String((data.admin_key_hash ?? data.admin_key ?? '') || '').trim();
-  } catch { return ''; }
+    const userRef = doc(db, 'usuarios', user.uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const isAdmin = userData.admin === true;
+      console.log('[alumnos] usuario admin desde Firebase:', isAdmin);
+      return isAdmin;
+    } else {
+      console.log('[alumnos] usuario no encontrado en Firestore');
+      return false;
+    }
+  } catch (error) {
+    console.warn('[alumnos] error verificando admin:', error);
+    return false;
+  }
 }
-function isAdminLocal(){ try { return localStorage.getItem('is_admin') === '1'; } catch { return false; } }
-function setIsAdminLocal(flag){ try { localStorage.setItem('is_admin', flag ? '1' : ''); } catch {} }
 
 function normalizeName(name){
   return String(name||'').trim();
@@ -55,7 +63,13 @@ function renderList(items){
     btn.addEventListener('click', ()=>{
       const idx = Number(btn.getAttribute('data-idx'));
       const selected = items[idx];
-      try { localStorage.setItem('fill_form_data', JSON.stringify(selected||{})); } catch {}
+      try { 
+        localStorage.setItem('fill_form_data', JSON.stringify(selected||{})); 
+        // Guardar también el ID del alumno para las notas
+        if (selected && selected.id) {
+          localStorage.setItem('current_alumno_id', selected.id);
+        }
+      } catch {}
       window.location.href = './';
     });
   });
@@ -76,7 +90,7 @@ async function loadAlumnos(){
     // Guard: solo admin
     const ok = await ensureAdmin();
     if (!ok) return;
-    await ensureAuth();
+    
     // Intentar ordenar por campo 'nombre' desde Firestore (si el índice lo permite)
     let docsSnap;
     try {
@@ -96,19 +110,26 @@ async function loadAlumnos(){
 }
 
 async function ensureAdmin(){
-  if (isAdminLocal()) return true;
-  await ensureAuth();
-  const storedVal = await fetchAdminKeyFromFirebase();
-  if (!storedVal) { alert('No está configurada la clave de administrador en Firebase'); window.location.href = './'; return false; }
-  const input = prompt('Ingrese clave de administrador:');
-  if (input == null) { window.location.href = './'; return false; }
-  const plain = String(input).trim();
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(plain));
-  const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  const ok = isSha256Hex(storedVal) ? (hex === storedVal) : (plain === storedVal);
-  if (!ok) { alert('Clave incorrecta'); window.location.href = './'; return false; }
-  try { localStorage.setItem('admin_key_hash', storedVal); } catch {}
-  setIsAdminLocal(true);
+  // Si ya verificamos que es admin, retornar true
+  if (isUserAdmin) return true;
+  
+  // Si no hay usuario logueado, redirigir al login
+  if (!currentUser) {
+    alert('Debes iniciar sesión para acceder a esta página');
+    window.location.href = './';
+    return false;
+  }
+  
+  // Verificar si es admin desde Firestore
+  const isAdmin = await checkUserAdminStatus(currentUser);
+  if (!isAdmin) {
+    alert('No tienes permisos de administrador para acceder a esta página');
+    window.location.href = './';
+    return false;
+  }
+  
+  // Actualizar estado global
+  isUserAdmin = true;
   return true;
 }
 
@@ -124,9 +145,43 @@ function initFilter(allItems){
   inp.addEventListener('input', apply);
 }
 
+// Observar cambios en el estado de autenticación
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  
+  if (user) {
+    // Usuario logueado - verificar si es admin
+    console.log('[alumnos] usuario logueado:', user.email);
+    isUserAdmin = await checkUserAdminStatus(user);
+    
+    if (isUserAdmin) {
+      // Si es admin, cargar alumnos
+      loadAlumnos();
+    } else {
+      // Si no es admin, mostrar error
+      alert('No tienes permisos de administrador para acceder a esta página');
+      window.location.href = './';
+    }
+  } else {
+    // Usuario no logueado - redirigir al login
+    console.log('[alumnos] usuario no logueado, redirigiendo');
+    window.location.href = './';
+  }
+});
+
 document.addEventListener('DOMContentLoaded', ()=>{
   window.lucide?.createIcons();
-  loadAlumnos();
+  
+  // Si ya hay un usuario logueado, verificar admin
+  if (auth.currentUser) {
+    currentUser = auth.currentUser;
+    checkUserAdminStatus(auth.currentUser).then(isAdmin => {
+      isUserAdmin = isAdmin;
+      if (isAdmin) {
+        loadAlumnos();
+      }
+    });
+  }
 });
 
 

@@ -73,7 +73,7 @@
             <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
               <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
             </button>
-                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v0.9</button>
+                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.0</button>
           </div>
         </div>
       </div>
@@ -84,11 +84,11 @@
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Formulario</h2>
         </div>
-        <div class="flex gap-2 mb-3">
-          <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-personales" aria-selected="true">Datos Personales</button>
-          <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-medica">Info Médica</button>
-          <button class="tab-btn px-3 py-2 rounded-md border" style="border-color: var(--border)" data-tab="tab-experiencia">Experiencia</button>
-          <button id="tab-notas-btn" class="tab-btn px-3 py-2 rounded-md border hidden" style="border-color: var(--border)" data-tab="tab-notas">Notas</button>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-personales" aria-selected="true">Datos Personales</button>
+          <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-medica">Info Médica</button>
+          <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-experiencia">Experiencia</button>
+          <button id="tab-notas-btn" class="tab-btn px-3 py-2 rounded-md border text-sm hidden" style="border-color: var(--border)" data-tab="tab-notas">Notas</button>
         </div>
         <form id="form-registro" class="grid gap-4">
           <div id="tab-personales" class="grid gap-3">
@@ -211,12 +211,6 @@
           
           <!-- Pestaña de Notas (solo visible para administradores) -->
           <div id="tab-notas" class="hidden grid gap-3">
-            <div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3 mb-2">
-              <p class="text-sm text-yellow-200/80">
-                <i data-lucide="info" class="w-4 h-4 inline mr-2"></i>
-                Esta sección es solo para administradores. Aquí puedes agregar notas sobre el progreso y mejoras del alumno.
-              </p>
-            </div>
             
             <div class="grid gap-3">
               <label class="field">
@@ -241,7 +235,7 @@
             <button type="button" id="btn-prev" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Anterior</button>
             <div class="flex gap-2">
               <button type="button" id="btn-next" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Siguiente</button>
-              <button type="submit" class="px-3 py-2 rounded-md btn-primary btn">Guardar</button>
+              <button type="submit" id="btn-guardar" class="px-3 py-2 rounded-md btn-primary btn hidden">Guardar</button>
             </div>
           </div>
         </form>
@@ -348,6 +342,64 @@
       </div>
     </div>
 
+    <!-- Modal: Changelog -->
+    <div id="modal-changelog" class="fixed inset-0 z-50 hidden">
+      <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
+      <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-lg">Changelog - v1.0</h3>
+          <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <h4 class="font-medium text-green-400 mb-2">✨ Nueva Funcionalidad</h4>
+            <ul class="text-sm space-y-1 text-gray-300">
+              <li>• Sistema de videos para usuarios comunes</li>
+              <li>• Los usuarios pueden ver videos agregados por administradores</li>
+              <li>• Navegación mejorada con sección de videos</li>
+              <li>• Sistema de notas por alumno para administradores</li>
+            </ul>
+          </div>
+          
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <h4 class="font-medium text-blue-400 mb-2">🔧 Mejoras Técnicas</h4>
+            <ul class="text-sm space-y-1 text-gray-300">
+              <li>• Gestión de secciones mejorada (formulario, videos, links, qr)</li>
+              <li>• Sistema de autenticación robusto con Firebase</li>
+              <li>• Verificación de permisos de administrador</li>
+              <li>• Almacenamiento local optimizado para notas y datos</li>
+            </ul>
+          </div>
+          
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <h4 class="font-medium text-yellow-400 mb-2">📱 Experiencia de Usuario</h4>
+            <ul class="text-sm space-y-1 text-gray-300">
+              <li>• Interfaz responsive para dispositivos móviles</li>
+              <li>• Navegación intuitiva con drawer lateral</li>
+              <li>• Formulario multi-pestaña con validación</li>
+              <li>• Sistema de autenticación con Google y email/password</li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-medium text-purple-400 mb-2">🎯 Características Principales</h4>
+            <ul class="text-sm space-y-1 text-gray-300">
+              <li>• Formulario de registro con datos personales, médicos y experiencia</li>
+              <li>• Biblioteca de videos de golf para todos los usuarios</li>
+              <li>• Panel de administración para gestión de contenido</li>
+              <li>• Sistema de notas personalizado por alumno</li>
+              <li>• Generador de códigos QR integrado</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
+          <p class="text-sm text-gray-400">Golf App v1.0 - Luciano Sancho Golf</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Registro -->
     <div id="modal-register" class="fixed inset-0 z-50 hidden">
       <div id="modal-register-overlay" class="absolute inset-0 bg-black/60"></div>
@@ -442,11 +494,11 @@
             <div class="font-medium mb-1">v0.6</div>
             <ul class="list-disc pl-5 space-y-1">
               <li>Link del QR actualizado.</li>
-              <li>Admin: login tocando el logo con clave en Firebase; bloque “Admin” en el menú con “Agregar Links” y “Alumnos”.</li>
+              <li>Admin: login tocando el logo con clave en Firebase; bloque "Admin" en el menú con "Agregar Links" y "Alumnos".</li>
               <li>Alumnos: página con listado alfabético, al tocar un nombre completa el formulario.</li>
               <li>Videos: nueva sección pública en el menú; muestra los videos en modo solo lectura.</li>
-              <li>Links: renombrado a “Agregar Links” y visible solo para admin.</li>
-              <li>QR: botón “Compartir” debajo del QR; botones centrados.</li>
+              <li>Links: renombrado a "Agregar Links" y visible solo para admin.</li>
+              <li>QR: botón "Compartir" debajo del QR; botones centrados.</li>
               <li>Estabilidad: auto long‑polling para Firestore y autenticación antes de leer config.</li>
             </ul>
           </div>
@@ -463,7 +515,7 @@
             <ul class="list-disc pl-5 space-y-1">
               <li>Formulario: edad auto al lado de la fecha de nacimiento.</li>
               <li>Edad compacta (máx. 2 dígitos) y alineada a la derecha.</li>
-              <li>Campo “Ciudad” agregado debajo de “Domicilio”.</li>
+              <li>Campo "Ciudad" agregado debajo de "Domicilio".</li>
             </ul>
           </div>
           <div>
@@ -485,6 +537,28 @@
               <li>Generador de QR simplificado (tamaño fijo) con fallback y librería local.</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Login de Administrador -->
+    <div id="modal-admin-login" class="fixed inset-0 z-50 hidden">
+      <div id="modal-admin-login-overlay" class="absolute inset-0 bg-black/60"></div>
+      <div class="relative max-w-md mx-auto mt-24 bg-[#0f172a] border rounded-lg p-6" style="border-color: var(--border)">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-lg">Acceso Administrador</h3>
+          <button id="btn-close-admin-login" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="field">
+            <label class="block text-sm font-medium mb-2">Clave de Administrador</label>
+            <input id="admin-key-input" type="text" inputmode="numeric" pattern="[0-9]*" class="input-base w-full text-center text-lg tracking-widest" placeholder="••••••••" maxlength="8" required />
+          </div>
+          
+          <button id="btn-validate-admin" class="w-full px-4 py-2 rounded-md btn-primary btn">
+            Validar Clave
+          </button>
         </div>
       </div>
     </div>
