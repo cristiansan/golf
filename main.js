@@ -25,6 +25,9 @@ function toggleAppVisibility(isLoggedIn) {
     loginOverlay.style.display = 'flex';
     mainContent.style.display = 'none';
     header.style.display = 'none';
+    
+    // Verificar si hay datos de alumno para cargar (incluso sin estar logueado)
+    // checkAndLoadAlumnoData(); // Comentado temporalmente hasta que se defina
   }
 }
 
@@ -35,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => { window.lucide?.createIcons
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy, updateDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, initializeFirestore, getDocs, query, orderBy, updateDoc, setDoc, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 
 const firebaseConfig = {
@@ -91,6 +94,18 @@ async function ensureAuth() {
   }
 }
 
+// Función para verificar si el usuario es admin
+async function checkUserRole(user) {
+  if (!user) return false;
+  try {
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+    return userDoc.exists() && userDoc.data().role === 'admin';
+  } catch (e) {
+    console.warn('[auth] error verificando admin:', e);
+    return false;
+  }
+}
+
 // Click en logo para login de admin
 (function initAdminLoginViaLogo(){
   const logo = document.getElementById('drawer-logo');
@@ -112,6 +127,24 @@ async function ensureAuth() {
       // éxito
       try { localStorage.setItem('admin_key_hash', storedVal); } catch {}
       setIsAdminLocal(true);
+      
+      // Crear/actualizar documento de usuario admin en Firestore
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userRef = doc(db, 'usuarios', user.uid);
+          await setDoc(userRef, {
+            uid: user.uid,
+            role: 'admin',
+            email: user.email || 'admin@local',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          console.log('[admin] usuario admin creado/actualizado en Firestore');
+        }
+      } catch (e) {
+        console.warn('[admin] error creando usuario en Firestore:', e);
+      }
       
       // Actualizar UI de admin inmediatamente
       updateAdminUI(true);
@@ -249,8 +282,8 @@ ensureLinksNavVisibility();
     try {
       // Buscar el perfil del usuario en Firestore
       const userQuery = query(
-        collection(db, 'usuarios'), 
-        query => query.where('uid', '==', user.uid)
+        collection(db, 'usuarios'),
+        where('uid', '==', user.uid)
       );
       const userSnapshot = await getDocs(userQuery);
       
@@ -283,13 +316,112 @@ ensureLinksNavVisibility();
     try {
       const formQuery = query(
         collection(db, 'formularios'),
-        query => query.where('email', '==', user.email)
+        where('email', '==', user.email)
       );
       const formSnapshot = await getDocs(formQuery);
       return !formSnapshot.empty;
     } catch (error) {
       console.warn('[auth] error verificando formulario:', error);
       return false;
+    }
+  }
+
+  // Verificar y cargar datos de alumno desde localStorage
+  function checkAndLoadAlumnoData() {
+    try {
+      const alumnoData = localStorage.getItem('fill_form_data');
+      if (alumnoData) {
+        const data = JSON.parse(alumnoData);
+        if (data && Object.keys(data).length > 0) {
+          // Cambiar a la sección del formulario
+          switchTo('formulario');
+          // Llenar el formulario con los datos del alumno
+          fillFormWithAlumnoData(data);
+          // Limpiar localStorage
+          localStorage.removeItem('fill_form_data');
+          console.log('[alumno] datos cargados en formulario:', data);
+        }
+      }
+    } catch (error) {
+      console.warn('[alumno] error cargando datos:', error);
+      localStorage.removeItem('fill_form_data');
+    }
+  }
+
+  // Llenar el formulario con datos del alumno
+  function fillFormWithAlumnoData(data) {
+    const form = document.getElementById('form-registro');
+    if (!form) return;
+
+    // Establecer el ID del alumno que se está editando
+    if (data.id && window.setCurrentAlumnoId) {
+      window.setCurrentAlumnoId(data.id);
+    }
+
+    // Mapear campos del formulario con los datos del alumno
+    const fieldMappings = {
+      'nombre': data.nombre,
+      'nacimiento': data.nacimiento,
+      'edad': data.edad,
+      'domicilio': data.domicilio,
+      'ciudad': data.ciudad,
+      'nacionalidad': data.nacionalidad,
+      'telefono': data.telefono,
+      'email': data.email,
+      'ocupacion': data.ocupacion,
+      'alergias': data.alergias,
+      'lesiones': data.lesiones,
+      'condicion': data.condicion,
+      'apto': data.apto,
+      'apto_vto': data.apto_vto,
+      'anios': data.anios,
+      'handicap': data.handicap,
+      'frecuencia': data.frecuencia,
+      'club': data.club,
+      'modalidad': data.modalidad,
+      'modalidad_otro': data.modalidad_otro,
+      'clases_previas': data.clases_previas
+    };
+
+    // Llenar cada campo del formulario
+    Object.entries(fieldMappings).forEach(([fieldName, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field) {
+          field.value = value;
+          
+          // Para campos select, verificar si la opción existe
+          if (field.tagName === 'SELECT') {
+            const option = field.querySelector(`option[value="${value}"]`);
+            if (option) {
+              field.value = value;
+            }
+          }
+        }
+      }
+    });
+
+    // Manejar campos especiales
+    if (data.modalidad === 'Otro' && data.modalidad_otro) {
+      const modalidadOtroRow = document.getElementById('modalidad-otro-row');
+      if (modalidadOtroRow) {
+        modalidadOtroRow.classList.remove('hidden');
+      }
+    }
+
+    // Calcular edad si hay fecha de nacimiento
+    if (data.nacimiento) {
+      const edadField = document.getElementById('edad');
+      if (edadField) {
+        const birthDate = new Date(data.nacimiento);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        edadField.value = age;
+      }
     }
   }
 
@@ -321,6 +453,9 @@ ensureLinksNavVisibility();
         // Si no tiene formulario, mostrar Formulario por defecto
         switchTo('formulario');
       }
+      
+      // Verificar si hay datos de alumno para cargar (desde la página de alumnos)
+      checkAndLoadAlumnoData();
       
       // Guardar en localStorage si está marcado "recordarme"
       const rememberMe = document.getElementById('login-remember')?.checked;
@@ -593,7 +728,7 @@ ensureLinksNavVisibility();
       // Buscar usuario por email
       const userQuery = query(
         collection(db, 'usuarios'), 
-        query => query.where('email', '==', email)
+        where('email', '==', email)
       );
       const userSnapshot = await getDocs(userQuery);
       
@@ -784,4 +919,162 @@ ensureLinksNavVisibility();
   });
   
   console.log('[fullscreen] sistema inicializado');
+})();
+
+// Sistema del Formulario
+(function initFormulario() {
+  const form = document.getElementById('form-registro');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabs = ['tab-personales', 'tab-medica', 'tab-experiencia'];
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const modalidadSelect = document.querySelector('select[name="modalidad"]');
+  const modalidadOtroRow = document.getElementById('modalidad-otro-row');
+  const aptoFileInput = document.getElementById('apto_file');
+  const aptoFileName = document.getElementById('apto_file_name');
+  const nacimientoInput = document.querySelector('input[name="nacimiento"]');
+  const edadInput = document.getElementById('edad');
+
+  let currentTabIndex = 0;
+  let currentAlumnoId = null; // Para saber si estamos editando un alumno existente
+
+  // Navegación entre pestañas
+  function showTab(index) {
+    tabs.forEach((tab, i) => {
+      const tabElement = document.getElementById(tab);
+      if (tabElement) {
+        tabElement.classList.toggle('hidden', i !== index);
+      }
+    });
+    
+    // Actualizar botones
+    if (btnPrev) btnPrev.style.display = index === 0 ? 'none' : 'block';
+    if (btnNext) btnNext.style.display = index === tabs.length - 1 ? 'none' : 'block';
+    
+    // Actualizar estado de botones de pestaña
+    tabBtns.forEach((btn, i) => {
+      btn.setAttribute('aria-selected', i === index);
+    });
+    
+    currentTabIndex = index;
+  }
+
+  // Event listeners para botones de pestaña
+  tabBtns.forEach((btn, index) => {
+    btn.addEventListener('click', () => showTab(index));
+  });
+
+  // Botones anterior/siguiente
+  btnPrev?.addEventListener('click', () => {
+    if (currentTabIndex > 0) showTab(currentTabIndex - 1);
+  });
+
+  btnNext?.addEventListener('click', () => {
+    if (currentTabIndex < tabs.length - 1) showTab(currentTabIndex + 1);
+  });
+
+  // Manejo de modalidad "Otro"
+  modalidadSelect?.addEventListener('change', (e) => {
+    if (modalidadOtroRow) {
+      modalidadOtroRow.classList.toggle('hidden', e.target.value !== 'Otro');
+    }
+  });
+
+  // Manejo de archivo de apto médico
+  aptoFileInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      aptoFileName.textContent = file.name;
+    } else {
+      aptoFileName.textContent = 'Seleccionar Archivo';
+    }
+  });
+
+  // Cálculo automático de edad
+  nacimientoInput?.addEventListener('change', (e) => {
+    if (e.target.value && edadInput) {
+      const birthDate = new Date(e.target.value);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      edadInput.value = age;
+    }
+  });
+
+  // Envío del formulario
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando...';
+      
+      // Asegurar autenticación antes de escribir
+      const user = await ensureAuth();
+      if (!user) {
+        throw new Error('No se pudo autenticar. Verifica tu conexión.');
+      }
+      
+      // Recopilar datos del formulario
+      const formData = new FormData(form);
+      const data = {};
+      
+      // Convertir FormData a objeto, excluyendo archivos
+      for (let [key, value] of formData.entries()) {
+        // Excluir campos de archivo y valores vacíos
+        if (value !== '' && key !== 'apto_file' && !(value instanceof File)) {
+          data[key] = value;
+        }
+      }
+      
+      // Atribuir propietario del formulario para reglas de seguridad
+      data.ownerUid = user.uid;
+      
+      // Agregar timestamps del servidor
+      data.updatedAt = serverTimestamp();
+      
+      // Si estamos editando un alumno existente, usar updateDoc
+      if (currentAlumnoId) {
+        const alumnoRef = doc(db, 'formularios', currentAlumnoId);
+        await updateDoc(alumnoRef, data);
+        console.log('[formulario] alumno actualizado:', currentAlumnoId);
+        alert('Alumno actualizado exitosamente');
+      } else {
+        // Nuevo registro
+        data.createdAt = serverTimestamp();
+        const docRef = await addDoc(collection(db, 'formularios'), data);
+        console.log('[formulario] nuevo alumno creado:', docRef.id);
+        alert('Alumno registrado exitosamente');
+      }
+      
+      // Limpiar formulario y resetear
+      form.reset();
+      currentAlumnoId = null;
+      showTab(0);
+      
+    } catch (error) {
+      console.error('[formulario] error guardando:', error);
+      alert('Error al guardar. Por favor intenta nuevamente.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+
+  // Función para establecer el ID del alumno que se está editando
+  window.setCurrentAlumnoId = function(id) {
+    currentAlumnoId = id;
+    console.log('[formulario] editando alumno:', id);
+  };
+
+  // Inicializar primera pestaña
+  showTab(0);
+  
+  console.log('[formulario] sistema inicializado');
 })();
