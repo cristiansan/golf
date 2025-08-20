@@ -1,3 +1,12 @@
+// ===== GOLF APP - ARCHIVO PRINCIPAL =====
+// Este archivo contiene toda la lógica de la aplicación:
+// - Inicialización de Firebase y autenticación
+// - Sistema de navegación y secciones
+// - Manejo del formulario de registro
+// - Sistema de videos y links
+// - Generador de QR
+// - Funcionalidades de administrador
+
 // Inicialización de iconos Lucide
 document.addEventListener('DOMContentLoaded', () => { 
   window.lucide?.createIcons(); 
@@ -23,12 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Firebase (ESM)
+// ===== CONFIGURACIÓN DE FIREBASE =====
+// Importaciones de Firebase (ESM)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, getDocs, query, orderBy, updateDoc, setDoc, where, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
+// Configuración de Firebase
 const firebaseConfig = {
   apiKey: 'AIzaSyCSbupnAd-CH5aCi9b5CvILnIIE74D5M34',
   authDomain: 'golf-f3b84.firebaseapp.com',
@@ -48,10 +59,11 @@ const auth = getAuth(app);
 // Configurar persistencia local
 setPersistence(auth, browserLocalPersistence);
 
-// Variables globales
-let currentUser = null;
-let isUserAdmin = false;
+// ===== VARIABLES GLOBALES =====
+let currentUser = null;        // Usuario actual autenticado
+let isUserAdmin = false;       // Si el usuario tiene permisos de administrador
 
+// ===== FUNCIONES DE VISIBILIDAD DE LA APP =====
 // Función para mostrar/ocultar la app según el estado de auth
 function toggleAppVisibility(isLoggedIn) {
   const loginOverlay = document.getElementById('login-overlay');
@@ -77,9 +89,12 @@ function toggleAppVisibility(isLoggedIn) {
   }
 }
 
+// ===== SISTEMA DE NAVEGACIÓN Y SECCIONES =====
 // Helpers de secciones
 const sections = { formulario: sec('formulario'), videos: sec('videos'), links: sec('links'), qr: sec('qr') };
 function sec(id){ return document.getElementById('sec-' + id); }
+
+// Función para cambiar entre secciones con animación
 function switchTo(target){
   Object.keys(sections).forEach(k => sections[k].classList.toggle('hidden', k!==target));
   const active = sections[target];
@@ -113,6 +128,7 @@ navEl?.addEventListener('click', (e) => {
 document.querySelectorAll('#app-drawer [data-section]')
   .forEach(b => b.addEventListener('click', () => { closeDrawer(); }));
 
+// ===== SISTEMA DE DRAWER LATERAL =====
 // Drawer: un solo botón en el header que alterna entre menu/x
 const drawerEl = document.getElementById('app-drawer');
 const drawerBtn = document.getElementById('btn-drawer');
@@ -136,6 +152,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawe
 new MutationObserver(setDrawerIcon).observe(drawerEl, { attributes: true, attributeFilter: ['class'] });
 setDrawerIcon();
 
+// ===== SISTEMA DE ADMINISTRADOR =====
 // UI: botón Alumnos solo para admin
 function ensureAlumnosNav(){
   try {
@@ -154,7 +171,9 @@ function ensureAlumnosNav(){
   } catch {}
 }
 
+// ===== MANEJO DEL FORMULARIO =====
 // Función para completar datos del formulario desde localStorage
+// Se usa cuando se selecciona un alumno desde la página de Alumnos
 function fillFormFromLocalStorage() {
   try {
     const formData = localStorage.getItem('fill_form_data');
@@ -171,44 +190,68 @@ function fillFormFromLocalStorage() {
         localStorage.removeItem('current_alumno_id');
       }
       
-      // Completar campos del formulario
-      const nombreInput = document.querySelector('input[name="nombre"]');
-      if (nombreInput && data.nombre) {
-        nombreInput.value = data.nombre;
-      }
-      
-      // Completar otros campos si existen
-      const emailInput = document.querySelector('input[name="email"]');
-      if (emailInput && data.email) {
-        emailInput.value = data.email;
-      }
-      
-      const telefonoInput = document.querySelector('input[name="telefono"]');
-      if (telefonoInput && data.telefono) {
-        telefonoInput.value = data.telefono;
-      }
-      
+      // Helpers de seteo seguro
+      const setVal = (selector, value) => {
+        const el = document.querySelector(selector);
+        if (el && value !== undefined && value !== null && value !== '') {
+          el.value = value;
+        }
+      };
+      const setTextArea = (name, value) => {
+        const el = document.querySelector(`textarea[name="${name}"]`) || document.querySelector(`input[name="${name}"]`);
+        if (el && value != null) el.value = value;
+      };
+
+      // Datos personales
+      setVal('input[name="nombre"]', data.nombre);
+      setVal('input[name="nacimiento"]', data.nacimiento);
+      // Edad: usar la guardada o calcular desde nacimiento
       const edadInput = document.querySelector('input[name="edad"]');
-      if (edadInput && data.edad) {
-        edadInput.value = data.edad;
+      if (edadInput) {
+        if (data.edad) {
+          edadInput.value = data.edad;
+        } else if (data.nacimiento) {
+          try {
+            const d = new Date(data.nacimiento);
+            if (!isNaN(d)) {
+              const diff = Date.now() - d.getTime();
+              const age = Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
+              edadInput.value = String(age);
+            }
+          } catch {}
+        }
       }
-      
-      // Completar campos de info médica si existen
-      const alergiasInput = document.querySelector('input[name="alergias"]');
-      if (alergiasInput && data.alergias) {
-        alergiasInput.value = data.alergias;
+      setVal('input[name="domicilio"]', data.domicilio);
+      setVal('input[name="ciudad"]', data.ciudad);
+      setVal('input[name="nacionalidad"]', data.nacionalidad);
+      setVal('input[name="telefono"]', data.telefono);
+      setVal('input[name="email"]', data.email);
+      setVal('input[name="ocupacion"]', data.ocupacion);
+
+      // Info médica
+      setTextArea('alergias', data.alergias);
+      setTextArea('lesiones', data.lesiones);
+      setTextArea('condicion', data.condicion);
+      const aptoSelect = document.querySelector('select[name="apto"]');
+      if (aptoSelect && data.apto) aptoSelect.value = data.apto;
+      setVal('input[name="apto_vto"]', data.apto_vto);
+
+      // Experiencia
+      setVal('input[name="anios"]', data.anios);
+      setVal('input[name="handicap"]', data.handicap);
+      const frecuenciaSelect = document.querySelector('select[name="frecuencia"]');
+      if (frecuenciaSelect && data.frecuencia) frecuenciaSelect.value = String(data.frecuencia);
+      setVal('input[name="club"]', data.club);
+      const modalidadSelect = document.querySelector('select[name="modalidad"]');
+      if (modalidadSelect && data.modalidad) modalidadSelect.value = data.modalidad;
+      const modalidadOtroRow = document.getElementById('modalidad-otro-row');
+      if (modalidadSelect && modalidadOtroRow) {
+        const showOtro = modalidadSelect.value === 'Otro';
+        modalidadOtroRow.classList.toggle('hidden', !showOtro);
+        if (showOtro) setVal('input[name="modalidad_otro"]', data.modalidad_otro || '');
       }
-      
-      const medicamentosInput = document.querySelector('input[name="medicamentos"]');
-      if (medicamentosInput && data.medicamentos) {
-        medicamentosInput.value = data.medicamentos;
-      }
-      
-      // Completar campos de experiencia si existen
-      const experienciaInput = document.querySelector('input[name="experiencia"]');
-      if (experienciaInput && data.experiencia) {
-        experienciaInput.value = data.experiencia;
-      }
+      const clasesPreviasSelect = document.querySelector('select[name="clases_previas"]');
+      if (clasesPreviasSelect && data.clases_previas) clasesPreviasSelect.value = data.clases_previas;
       
       // Limpiar localStorage después de usar
       localStorage.removeItem('fill_form_data');
@@ -225,6 +268,7 @@ function fillFormFromLocalStorage() {
   }
 }
 
+// ===== SISTEMA DE NOTAS PARA ADMINISTRADORES =====
 // Función para actualizar notas del alumno actual
 function actualizarNotasAlumno() {
   const historialNotas = document.getElementById('historial-notas');
@@ -401,6 +445,7 @@ function initNotasFunctionality() {
   console.log('[notas] funcionalidad de notas inicializada correctamente');
 }
 
+// ===== GESTIÓN DE ADMINISTRADORES =====
 // Actualizar UI de admin
 function updateAdminUI(isAdmin) {
   console.log('[admin] 🔍 updateAdminUI llamado con isAdmin:', isAdmin);
@@ -499,6 +544,7 @@ async function checkUserHasForm(user) {
   }
 }
 
+// ===== ESTADO DE AUTENTICACIÓN =====
 // Estado de autenticación
 async function updateAuthUI(user) {
   currentUser = user;
@@ -558,6 +604,7 @@ onAuthStateChanged(auth, async (user) => {
   console.log('[auth] estado cambiado:', user ? user.email : 'no logueado');
 });
 
+// ===== SISTEMA DE AUTENTICACIÓN =====
 // Sistema de autenticación
 (function initAuth() {
   const loginModal = document.getElementById('modal-login');
@@ -640,6 +687,7 @@ onAuthStateChanged(auth, async (user) => {
     window.lucide?.createIcons();
   });
 
+  // ===== LOGIN CON EMAIL/PASSWORD =====
   // Login con email/password
   loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -684,6 +732,7 @@ onAuthStateChanged(auth, async (user) => {
     }
   });
 
+  // ===== REGISTRO CON EMAIL/PASSWORD =====
   // Registro con email/password
   registerForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -750,6 +799,7 @@ onAuthStateChanged(auth, async (user) => {
     }
   });
 
+  // ===== LOGIN CON GOOGLE =====
   // Login con Google
   document.getElementById('btn-login-google')?.addEventListener('click', async () => {
     try {
@@ -789,6 +839,7 @@ onAuthStateChanged(auth, async (user) => {
     }
   });
 
+  // ===== LOGOUT Y RECUPERACIÓN =====
   // Logout
   btnLogout?.addEventListener('click', async () => {
     try {
@@ -829,6 +880,7 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById('modal-login-overlay')?.addEventListener('click', clearForms);
   document.getElementById('modal-register-overlay')?.addEventListener('click', clearForms);
   
+  // ===== MODAL DE CHANGELOG =====
   // Modal de changelog
   const btnChangelog = document.getElementById('btn-changelog');
   const modalChangelog = document.getElementById('modal-changelog');
@@ -852,9 +904,11 @@ onAuthStateChanged(auth, async (user) => {
   console.log('[auth] sistema inicializado');
 })();
 
+// ===== SISTEMA DE PESTAÑAS DEL FORMULARARIO =====
 // Tabs con animación
 const tabs = ['tab-personales','tab-medica','tab-experiencia','tab-notas'];
 let currentTabIndex = 0;
+
 function showTab(i){
   currentTabIndex = Math.max(0, Math.min(tabs.length-1, i));
   tabs.forEach((id,idx)=>{ 
@@ -902,10 +956,12 @@ window.showTab = showTab;
 window.actualizarNotasAlumno = actualizarNotasAlumno;
 window.renderVideos = renderVideos;
 
+// Event listeners para navegación entre pestañas
 document.querySelectorAll('.tab-btn').forEach((b,i)=>b.addEventListener('click',()=>showTab(i)));
 document.getElementById('btn-prev')?.addEventListener('click',()=>showTab(currentTabIndex-1));
 document.getElementById('btn-next')?.addEventListener('click',()=>showTab(currentTabIndex+1));
 
+// ===== SISTEMA DE LINKS Y VIDEOS DE YOUTUBE =====
 // Links YouTube
 const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
 const elGrid = document.getElementById('links-grid');
@@ -913,6 +969,7 @@ const elSearch = document.getElementById('links-search');
 const elTag = document.getElementById('links-tag');
 const elOrder = document.getElementById('links-order');
 
+// Función para extraer ID de video de YouTube desde URL
 function youtubeId(url){ 
   try{ 
     const u=new URL(url); 
@@ -927,6 +984,7 @@ function youtubeId(url){
   } 
 }
 
+// Función para renderizar la lista de links/videos
 function renderLinks(){
   // Verificar que los elementos existen antes de usarlos
   if (!elGrid) {
@@ -1013,6 +1071,7 @@ function renderLinks(){
   });
 }
 
+// ===== AGREGAR NUEVOS LINKS (solo para admin) =====
 // Agregar nuevo link (solo para admin)
 const btnAddLink = document.getElementById('btn-add-link');
 if (btnAddLink) {
@@ -1045,6 +1104,7 @@ if (btnAddLink) {
   });
 }
 
+// ===== INICIALIZACIÓN Y CONFIGURACIÓN =====
 // Inicializar
 showTab(0);
 
@@ -1054,7 +1114,7 @@ if (elGrid) {
   
   // Agregar event listeners solo si los elementos existen
   if (elSearch) elSearch.addEventListener('input', renderLinks);
-  if (elTag) elTag.addEventListener('change', renderLinks);
+  if (elTag) elSearch.addEventListener('change', renderLinks);
   if (elOrder) elOrder.addEventListener('change', renderLinks);
 }
 
@@ -1066,6 +1126,128 @@ setTimeout(() => {
 // Completar formulario si hay datos
 fillFormFromLocalStorage();
 
+// ===== GUARDADO DE FORMULARIO EN FIRESTORE =====
+// Función para obtener valores de inputs de forma segura
+function getInputValue(selector) {
+  const el = document.querySelector(selector);
+  return el ? (el.value ?? '').toString().trim() : '';
+}
+
+// Función para recolectar todos los datos del formulario
+function collectFormData() {
+  const modalidad = getInputValue('select[name="modalidad"]');
+  const modalidadOtro = getInputValue('input[name="modalidad_otro"]');
+  const base = {
+    nombre: getInputValue('input[name="nombre"]'),
+    nacimiento: getInputValue('input[name="nacimiento"]'),
+    edad: getInputValue('input[name="edad"]'),
+    domicilio: getInputValue('input[name="domicilio"]'),
+    ciudad: getInputValue('input[name="ciudad"]'),
+    nacionalidad: getInputValue('input[name="nacionalidad"]'),
+    telefono: getInputValue('input[name="telefono"]'),
+    email: getInputValue('input[name="email"]'),
+    ocupacion: getInputValue('input[name="ocupacion"]'),
+    alergias: getInputValue('textarea[name="alergias"]') || getInputValue('input[name="alergias"]'),
+    lesiones: getInputValue('textarea[name="lesiones"]') || getInputValue('input[name="lesiones"]'),
+    condicion: getInputValue('textarea[name="condicion"]') || getInputValue('input[name="condicion"]'),
+    apto: getInputValue('select[name="apto"]'),
+    apto_vto: getInputValue('input[name="apto_vto"]'),
+    anios: getInputValue('input[name="anios"]'),
+    handicap: getInputValue('input[name="handicap"]'),
+    frecuencia: getInputValue('select[name="frecuencia"]'),
+    club: getInputValue('input[name="club"]'),
+    modalidad,
+    clases_previas: getInputValue('select[name="clases_previas"]')
+  };
+  if (modalidad === 'Otro') {
+    base.modalidad_otro = modalidadOtro;
+  }
+  return base;
+}
+
+// Función para obtener el ID del formulario existente del usuario
+async function getUserFormDocId(uid) {
+  try {
+    const formQuery = query(
+      collection(db, 'formularios'),
+      where('ownerUid', '==', uid)
+    );
+    const snap = await getDocs(formQuery);
+    if (!snap.empty) return snap.docs[0].id;
+  } catch (e) {
+    console.warn('[formulario] error buscando formulario del usuario:', e);
+  }
+  return null;
+}
+
+// ===== BIND DEL SUBMIT DEL FORMULARARIO =====
+// Bind submit del formulario
+const formRegistro = document.getElementById('form-registro');
+if (formRegistro) {
+  formRegistro.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Validación manual: asegurar campos requeridos y mostrar la pestaña correspondiente
+    const requiredFields = [
+      { selector: 'input[name="nombre"]', tabIndex: 0, label: 'Nombre completo' },
+      { selector: 'input[name="nacimiento"]', tabIndex: 0, label: 'Fecha de Nacimiento' },
+      { selector: 'input[name="edad"]', tabIndex: 0, label: 'Edad' }
+    ];
+    for (const f of requiredFields) {
+      const el = document.querySelector(f.selector);
+      if (el && el.hasAttribute('required')) {
+        if (!el.value) {
+          showTab(f.tabIndex);
+          setTimeout(() => { el.focus(); }, 0);
+          alert(`Completa el campo requerido: ${f.label}`);
+          return;
+        }
+      }
+    }
+    const btnGuardar = document.getElementById('btn-guardar');
+    const originalText = btnGuardar ? btnGuardar.textContent : '';
+    try {
+      if (!currentUser) {
+        alert('Debes iniciar sesión para guardar el formulario');
+        return;
+      }
+
+      if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando...'; }
+
+      const data = collectFormData();
+      // Campos de auditoría/propiedad
+      data.ownerUid = currentUser.uid;
+
+      // Crear o actualizar
+      let didCreate = false;
+      const alumnoIdEdicion = window.currentAlumnoId;
+      if (alumnoIdEdicion && isUserAdmin) {
+        // Admin actualiza un alumno existente
+        const ref = doc(db, 'formularios', alumnoIdEdicion);
+        await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+      } else {
+        // Usuario crea/actualiza su propio formulario
+        const existingId = await getUserFormDocId(currentUser.uid);
+        if (existingId) {
+          const ref = doc(db, 'formularios', existingId);
+          await updateDoc(ref, { ...data, updatedAt: serverTimestamp(), ownerUid: currentUser.uid });
+        } else {
+          await addDoc(collection(db, 'formularios'), { ...data, createdAt: serverTimestamp(), ownerUid: currentUser.uid });
+          didCreate = true;
+        }
+      }
+
+      alert(didCreate ? 'Datos guardados correctamente (nuevo formulario)' : 'Datos guardados correctamente');
+    } catch (error) {
+      console.error('[formulario] error guardando:', error);
+      alert('Error al guardar el formulario');
+    } finally {
+      if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = originalText || 'Guardar'; }
+    }
+  });
+}
+
+// ===== SISTEMA DE VIDEOS =====
 // Función para inicializar la sección de videos
 function initVideosSection() {
   console.log('[videos] 🔍 initVideosSection llamado');
@@ -1141,6 +1323,7 @@ console.log('[app] sistema inicializado');
 
 // Sistema de videos para usuarios comunes funcionando correctamente
 
+// ===== GENERADOR DE CÓDIGOS QR =====
 // Generador de QR
 (function initQR() {
   const btnGenQR = document.getElementById('btn-gen-qr');
@@ -1164,19 +1347,30 @@ console.log('[app] sistema inicializado');
     }
     
     try {
+      // Calcular tamaño cuadrado según el contenedor
+      const parent = qrCanvas.parentElement || qrCanvas;
+      const parentWidth = parent.getBoundingClientRect().width || 300;
+      const size = Math.max(180, Math.min(360, Math.floor(parentWidth - 24)));
+
+      // Ajustar canvas a cuadrado exacto
+      qrCanvas.width = size;
+      qrCanvas.height = size;
+      qrCanvas.style.width = size + 'px';
+      qrCanvas.style.height = size + 'px';
+
       // Limpiar canvas
       const ctx = qrCanvas.getContext('2d');
-      ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+      ctx.clearRect(0, 0, size, size);
       
-             // Generar QR usando la librería QRCode
-       QRCode.toCanvas(qrCanvas, url, {
-         width: 300,
-         margin: 4,
-         color: {
-           dark: '#22c55e',  // Color verde del tema
-           light: '#0b1020'  // Color de fondo del tema
-         }
-       }, function (error) {
+      // Generar QR usando la librería QRCode
+      QRCode.toCanvas(qrCanvas, url, {
+        width: size,
+        margin: 4,
+        color: {
+          dark: '#22c55e',  // Color verde del tema
+          light: '#0b1020'  // Color de fondo del tema
+        }
+      }, function (error) {
         if (error) {
           console.error('[qr] error generando QR:', error);
           alert('Error al generar el código QR');

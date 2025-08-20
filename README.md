@@ -1,4 +1,4 @@
-## Golf App — README (v0.9)
+## Golf App — README (v1.1)
 
 ![Menu User](https://github.com/user-attachments/assets/736d311e-ee49-4129-9dca-334949de6ab3)
 ![Menu Admin](https://github.com/user-attachments/assets/edd333a2-8c30-4152-9a40-2523fc60ef62)
@@ -7,7 +7,14 @@
 ![Agregar videos](https://github.com/user-attachments/assets/06a64f17-b78d-488d-bc3d-d723fa33fc67)
 
 
-### v0.9
+### v1.1
+- Guardado del formulario en Firestore con creación/actualización, `ownerUid` y timestamps.
+- Confirmación al guardar datos.
+- Validación manual del formulario (pestañas ocultas) y `novalidate` en el form.
+- Prellenado completo al seleccionar alumno (nacimiento, domicilio, ciudad, selects y textareas).
+- Eliminado botón “Cargar demo” y lógica asociada.
+
+### v1.0
 - Edición de alumnos desde listado: prellenado del formulario y permanencia en la sección correspondiente.
 - Guardado del formulario con serverTimestamp, ownerUid y distinción crear/actualizar; exclusión de archivos del payload.
 - Compatibilidad y permisos Firestore: creación/actualización del usuario admin en `usuarios` con `role: 'admin'`.

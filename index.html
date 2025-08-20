@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Golf App — Formulario, Links y QR</title>
+    
+    <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,6 +14,8 @@
     <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="./styles.css?v=2" />
+    
+    <!-- Estilos personalizados -->
     <style>
       .nav-title { letter-spacing: 0.2px; }
       .tab-btn[aria-selected="true"] { outline: 1px solid var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
@@ -26,71 +30,96 @@
     </style>
   </head>
   <body class="min-h-screen">
-    <!-- Overlay de login obligatorio -->
+    
+    <!-- ===== OVERLAY DE LOGIN OBLIGATORIO ===== -->
+    <!-- Se muestra cuando el usuario no está autenticado, bloqueando toda la app -->
     <div id="login-overlay" class="fixed inset-0 z-50 bg-black flex items-center justify-center">
-              <div class="text-center">
-                 <div class="mb-6">
-           <img src="./logo.jpeg" alt="Logo" class="mx-auto mb-4 rounded-lg opacity-90" />
-         </div>
+      <div class="text-center">
+        <div class="mb-6">
+          <img src="./logo.jpeg" alt="Logo" class="mx-auto mb-4 rounded-lg opacity-90" />
+        </div>
         <button id="btn-login-required" class="px-6 py-3 rounded-md btn-primary btn text-lg">
           Iniciar Sesión
         </button>
       </div>
     </div>
 
+    <!-- ===== HEADER PRINCIPAL ===== -->
+    <!-- Barra superior con título, info del usuario y botones de control -->
     <header class="sticky top-0 z-50 border-b" style="border-color: var(--border)">
       <div class="container flex items-center gap-3 py-1 relative">
         <h1 class="text-lg font-semibold nav-title">Golf App</h1>
         <div class="absolute top-1 right-0 flex items-center gap-2">
+          <!-- Info del usuario logueado (oculto por defecto) -->
           <div id="user-info" class="hidden flex items-center gap-2">
             <span id="user-email" class="text-sm muted"></span>
             <button id="btn-logout" class="px-2 py-1 rounded-md border btn text-xs" style="border-color: var(--border);">Cerrar</button>
           </div>
+          <!-- Botón de login (visible cuando no hay usuario) -->
           <button id="btn-login" class="px-3 py-1 rounded-md border btn text-sm" style="border-color: var(--border);">Iniciar Sesión</button>
+          <!-- Botones de control -->
           <button id="btn-fullscreen" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa"><i data-lucide="maximize-2"></i></button>
           <button id="btn-drawer" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-controls="app-drawer" aria-label="Abrir menú"><i data-lucide="menu"></i></button>
         </div>
       </div>
     </header>
 
+    <!-- ===== DRAWER LATERAL (MENÚ) ===== -->
+    <!-- Panel deslizable derecho con navegación y opciones -->
     <div id="app-drawer" data-drawer-placement="right" class="fixed top-0 right-0 z-40 h-screen w-64 translate-x-full transition-transform drawer-surface" tabindex="-1" aria-labelledby="app-drawer-label">
       <div class="relative min-h-screen pb-24 flex flex-col">
         <div class="px-4 py-1 border-b" style="border-color: var(--border)"></div>
+        
+        <!-- Navegación principal -->
         <nav class="p-2 space-y-1" style="margin-top: 25px;">
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="formulario">Formulario</button>
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="videos">Videos</button>
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="qr">QR</button>
+          
+          <!-- Sección de administrador (oculta por defecto) -->
           <div id="nav-admin-header" class="px-3 pt-3 text-xs muted" style="display:none;">Admin</div>
           <div id="nav-admin" class="space-y-1" style="display:none;">
             <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="links">Agregar Links</button>
           </div>
         </nav>
+        
+        <!-- Pie del drawer con logo y botones -->
         <div class="absolute bottom-0 left-0 right-0 px-4 py-3 border-t" style="border-color: var(--border)">
           <div class="text-xs muted mb-2 text-center">Luciano Sancho Golf</div>
-                     <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-3/4 mx-auto block opacity-90 rounded-full" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
+          <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-3/4 mx-auto block opacity-90 rounded-full" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
             <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
               <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
             </button>
-                         <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.0</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.1</button>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
     <main class="container grid gap-6 py-4">
+      
+      <!-- ===== SECCIÓN: FORMULARIO DE REGISTRO ===== -->
+      <!-- Formulario principal con pestañas para datos personales, médicos y experiencia -->
       <section id="sec-formulario" class="card-surface">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Formulario</h2>
         </div>
+        
+        <!-- Pestañas del formulario -->
         <div class="grid grid-cols-2 gap-2 mb-3">
           <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-personales" aria-selected="true">Datos Personales</button>
           <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-medica">Info Médica</button>
           <button class="tab-btn px-3 py-2 rounded-md border text-sm" style="border-color: var(--border)" data-tab="tab-experiencia">Experiencia</button>
           <button id="tab-notas-btn" class="tab-btn px-3 py-2 rounded-md border text-sm hidden" style="border-color: var(--border)" data-tab="tab-notas">Notas</button>
         </div>
-        <form id="form-registro" class="grid gap-4">
+        
+        <!-- Formulario principal -->
+        <form id="form-registro" class="grid gap-4" novalidate>
+          
+          <!-- PESTAÑA 1: DATOS PERSONALES -->
           <div id="tab-personales" class="grid gap-3">
             <div class="grid md:grid-cols-3 gap-3">
               <label class="field md:col-span-2">
@@ -133,6 +162,8 @@
               </label>
             </div>
           </div>
+          
+          <!-- PESTAÑA 2: INFORMACIÓN MÉDICA -->
           <div id="tab-medica" class="hidden grid gap-3">
             <label class="field">
               <textarea class="textarea-base" name="alergias" rows="2" placeholder="Especificar alergias relevantes"></textarea>
@@ -166,6 +197,8 @@
               </div>
             </div>
           </div>
+          
+          <!-- PESTAÑA 3: EXPERIENCIA EN GOLF -->
           <div id="tab-experiencia" class="hidden grid gap-3">
             <div class="grid md:grid-cols-3 gap-3">
               <label class="field">
@@ -209,9 +242,8 @@
             </label>
           </div>
           
-          <!-- Pestaña de Notas (solo visible para administradores) -->
+          <!-- PESTAÑA 4: NOTAS DEL ALUMNO (solo para administradores) -->
           <div id="tab-notas" class="hidden grid gap-3">
-            
             <div class="grid gap-3">
               <label class="field">
                 <span class="block text-sm font-medium mb-2">Notas del Alumno</span>
@@ -231,6 +263,8 @@
               </div>
             </div>
           </div>
+          
+          <!-- Botones de navegación del formulario -->
           <div class="flex items-center justify-between pt-2 border-t" style="border-color: var(--border)">
             <button type="button" id="btn-prev" class="px-3 py-2 rounded-md border btn" style="border-color: var(--border)">Anterior</button>
             <div class="flex gap-2">
@@ -241,6 +275,8 @@
         </form>
       </section>
 
+      <!-- ===== SECCIÓN: AGREGAR LINKS (solo admin) ===== -->
+      <!-- Panel para administradores agregar videos de YouTube -->
       <section id="sec-links" class="card-surface hidden">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Agregar Links (YouTube)</h2>
@@ -259,6 +295,8 @@
         <div id="links-grid" class="grid-cards"></div>
       </section>
 
+      <!-- ===== SECCIÓN: VIDEOS ===== -->
+      <!-- Biblioteca de videos para todos los usuarios (solo lectura) -->
       <section id="sec-videos" class="card-surface hidden">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Videos</h2>
@@ -266,6 +304,8 @@
         <div id="videos-grid" class="grid-cards"></div>
       </section>
 
+      <!-- ===== SECCIÓN: GENERADOR DE QR ===== -->
+      <!-- Herramienta para crear códigos QR personalizables -->
       <section id="sec-qr" class="card-surface hidden">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold">Generador de QR</h2>
@@ -290,10 +330,11 @@
       </section>
     </main>
 
-         <!-- Modal: Login -->
-     <div id="modal-login" class="fixed inset-0 z-50 hidden">
-       <div id="modal-login-overlay" class="absolute inset-0 bg-black/60"></div>
-       <div class="relative max-w-md mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
+    <!-- ===== MODAL: LOGIN ===== -->
+    <!-- Ventana de inicio de sesión con email/password y Google -->
+    <div id="modal-login" class="fixed inset-0 z-50 hidden">
+      <div id="modal-login-overlay" class="absolute inset-0 bg-black/60"></div>
+      <div class="relative max-w-md mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold text-lg">Iniciar Sesión</h3>
           <button id="btn-close-login" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
@@ -342,65 +383,46 @@
       </div>
     </div>
 
-    <!-- Modal: Changelog -->
+    <!-- ===== MODAL: CHANGELOG ===== -->
+    <!-- Ventana con historial de cambios y versiones -->
     <div id="modal-changelog" class="fixed inset-0 z-50 hidden">
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-lg">Changelog - v1.0</h3>
+          <h3 class="font-semibold text-lg">Changelog - v1.1</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         
         <div class="space-y-4 max-h-96 overflow-y-auto">
           <div class="border-b pb-3" style="border-color: var(--border)">
-            <h4 class="font-medium text-green-400 mb-2">✨ Nueva Funcionalidad</h4>
-            <ul class="text-sm space-y-1 text-gray-300">
-              <li>• Sistema de videos para usuarios comunes</li>
-              <li>• Los usuarios pueden ver videos agregados por administradores</li>
-              <li>• Navegación mejorada con sección de videos</li>
-              <li>• Sistema de notas por alumno para administradores</li>
+            <div class="font-medium mb-1">v1.1</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Guardado del formulario en Firestore con creación/actualización, ownerUid y timestamps.</li>
+              <li>Confirmación al guardar datos.</li>
+              <li>Validación manual del formulario para evitar errores con campos requeridos en pestañas ocultas.</li>
+              <li>Prellenado completo del formulario al seleccionar un alumno (incluye nacimiento, domicilio, ciudad, selects y textareas).</li>
+              <li>Removido botón de "Cargar demo" y código asociado.</li>
             </ul>
           </div>
-          
           <div class="border-b pb-3" style="border-color: var(--border)">
-            <h4 class="font-medium text-blue-400 mb-2">🔧 Mejoras Técnicas</h4>
-            <ul class="text-sm space-y-1 text-gray-300">
-              <li>• Gestión de secciones mejorada (formulario, videos, links, qr)</li>
-              <li>• Sistema de autenticación robusto con Firebase</li>
-              <li>• Verificación de permisos de administrador</li>
-              <li>• Almacenamiento local optimizado para notas y datos</li>
-            </ul>
-          </div>
-          
-          <div class="border-b pb-3" style="border-color: var(--border)">
-            <h4 class="font-medium text-yellow-400 mb-2">📱 Experiencia de Usuario</h4>
-            <ul class="text-sm space-y-1 text-gray-300">
-              <li>• Interfaz responsive para dispositivos móviles</li>
-              <li>• Navegación intuitiva con drawer lateral</li>
-              <li>• Formulario multi-pestaña con validación</li>
-              <li>• Sistema de autenticación con Google y email/password</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 class="font-medium text-purple-400 mb-2">🎯 Características Principales</h4>
-            <ul class="text-sm space-y-1 text-gray-300">
-              <li>• Formulario de registro con datos personales, médicos y experiencia</li>
-              <li>• Biblioteca de videos de golf para todos los usuarios</li>
-              <li>• Panel de administración para gestión de contenido</li>
-              <li>• Sistema de notas personalizado por alumno</li>
-              <li>• Generador de códigos QR integrado</li>
+            <div class="font-medium mb-1">v1.0</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Sistema de videos para usuarios comunes.</li>
+              <li>Los usuarios pueden ver videos agregados por administradores.</li>
+              <li>Navegación mejorada con sección de videos.</li>
+              <li>Sistema de notas por alumno para administradores.</li>
             </ul>
           </div>
         </div>
         
         <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
-          <p class="text-sm text-gray-400">Golf App v1.0 - Luciano Sancho Golf</p>
+          <p class="text-sm text-gray-400">Golf App v1.1 - Luciano Sancho Golf</p>
         </div>
       </div>
     </div>
 
-    <!-- Modal: Registro -->
+    <!-- ===== MODAL: REGISTRO ===== -->
+    <!-- Ventana para crear nueva cuenta -->
     <div id="modal-register" class="fixed inset-0 z-50 hidden">
       <div id="modal-register-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-md mx-auto mt-24 bg-[#0f172a] border rounded-lg p-6" style="border-color: var(--border)">
@@ -442,7 +464,8 @@
       </div>
     </div>
 
-    <!-- Modal: Changelog -->
+    <!-- ===== MODAL: NOTAS DE VERSIÓN ===== -->
+    <!-- Ventana con historial detallado de versiones -->
     <div id="modal-changelog" class="fixed inset-0 z-50 hidden">
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-lg mx-auto mt-24 bg-[#0f172a] border rounded-lg p-4" style="border-color: var(--border)">
@@ -450,46 +473,46 @@
           <h3 class="font-semibold">Notas de versión</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
-                 <div class="text-sm space-y-4" style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
-           <div>
-             <div class="font-medium mb-1">v0.9</div>
-             <ul class="list-disc pl-5 space-y-1">
-               <li>Edición de alumnos: al tocar un alumno se prellenan los datos en el formulario y se mantiene en la sección correspondiente.</li>
-               <li>Guardado del formulario: ahora usa <code>serverTimestamp</code>, agrega <code>ownerUid</code> y distingue entre crear y actualizar.</li>
-               <li>Compatibilidad Firestore: se excluyen archivos del guardado (apto médico) para evitar errores; manejo de permisos mejorado.</li>
-               <li>Admin: al validar la clave se crea/actualiza el documento en <code>usuarios</code> con <code>role: 'admin'</code> para cumplir reglas.</li>
-               <li>Reglas: ajustes para permitir edición por admin/propietario y campos nuevos (modalidad_otro, updatedAt, ownerUid).</li>
-               <li>UI: overlay de login más limpio, se retiraron textos redundantes.</li>
-               <li>Correcciones: errores de permisos, función no definida y estabilidad general.</li>
-             </ul>
-           </div>
-           <div>
-             <div class="font-medium mb-1">v0.8</div>
-             <ul class="list-disc pl-5 space-y-1">
-               <li>Funcionalidad de pantalla completa implementada.</li>
-               <li>Botón de pantalla completa en el header (icono compacto).</li>
-               <li>Botón de pantalla completa en el drawer lateral (con texto descriptivo).</li>
-               <li>Iconos dinámicos que cambian según el estado (maximizar/minimizar).</li>
-               <li>Texto del botón del drawer se actualiza automáticamente.</li>
-               <li>Salida de pantalla completa con tecla Escape.</li>
-               <li>Compatibilidad multiplataforma (Chrome, Firefox, Safari, Edge).</li>
-               <li>Detección automática de soporte del navegador.</li>
-               <li>Integración perfecta con el sistema de autenticación existente.</li>
-             </ul>
-           </div>
-           <div>
-             <div class="font-medium mb-1">v0.7</div>
-             <ul class="list-disc pl-5 space-y-1">
-               <li>Sistema de autenticación completo con Firebase Auth.</li>
-               <li>Login obligatorio: la app no es accesible sin autenticación.</li>
-               <li>Registro de usuarios con email/password y Google.</li>
-               <li>Sistema de admin automático: usuarios con campo admin=true ven opciones especiales.</li>
-               <li>Acceso a "Alumnos" y "Agregar Videos" solo para administradores.</li>
-               <li>Persistencia de sesión y logout funcional.</li>
-               <li>UI mejorada: overlay de login con logo y diseño minimalista.</li>
-               <li>Recuperación de contraseña y validación de formularios.</li>
-             </ul>
-           </div>
+        <div class="text-sm space-y-4" style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
+          <div>
+            <div class="font-medium mb-1">v0.9</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Edición de alumnos: al tocar un alumno se prellenan los datos en el formulario y se mantiene en la sección correspondiente.</li>
+              <li>Guardado del formulario: ahora usa <code>serverTimestamp</code>, agrega <code>ownerUid</code> y distingue entre crear y actualizar.</li>
+              <li>Compatibilidad Firestore: se excluyen archivos del guardado (apto médico) para evitar errores; manejo de permisos mejorado.</li>
+              <li>Admin: al validar la clave se crea/actualiza el documento en <code>usuarios</code> con <code>role: 'admin'</code> para cumplir reglas.</li>
+              <li>Reglas: ajustes para permitir edición por admin/propietario y campos nuevos (modalidad_otro, updatedAt, ownerUid).</li>
+              <li>UI: overlay de login más limpio, se retiraron textos redundantes.</li>
+              <li>Correcciones: errores de permisos, función no definida y estabilidad general.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-medium mb-1">v0.8</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Funcionalidad de pantalla completa implementada.</li>
+              <li>Botón de pantalla completa en el header (icono compacto).</li>
+              <li>Botón de pantalla completa en el drawer lateral (con texto descriptivo).</li>
+              <li>Iconos dinámicos que cambian según el estado (maximizar/minimizar).</li>
+              <li>Texto del botón del drawer se actualiza automáticamente.</li>
+              <li>Salida de pantalla completa con tecla Escape.</li>
+              <li>Compatibilidad multiplataforma (Chrome, Firefox, Safari, Edge).</li>
+              <li>Detección automática de soporte del navegador.</li>
+              <li>Integración perfecta con el sistema de autenticación existente.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-medium mb-1">v0.7</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Sistema de autenticación completo con Firebase Auth.</li>
+              <li>Login obligatorio: la app no es accesible sin autenticación.</li>
+              <li>Registro de usuarios con email/password y Google.</li>
+              <li>Sistema de admin automático: usuarios con campo admin=true ven opciones especiales.</li>
+              <li>Acceso a "Alumnos" y "Agregar Videos" solo para administradores.</li>
+              <li>Persistencia de sesión y logout funcional.</li>
+              <li>UI mejorada: overlay de login con logo y diseño minimalista.</li>
+              <li>Recuperación de contraseña y validación de formularios.</li>
+            </ul>
+          </div>
           <div>
             <div class="font-medium mb-1">v0.6</div>
             <ul class="list-disc pl-5 space-y-1">
@@ -541,7 +564,8 @@
       </div>
     </div>
 
-    <!-- Modal: Login de Administrador -->
+    <!-- ===== MODAL: LOGIN DE ADMINISTRADOR ===== -->
+    <!-- Ventana para validar clave de administrador -->
     <div id="modal-admin-login" class="fixed inset-0 z-50 hidden">
       <div id="modal-admin-login-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-md mx-auto mt-24 bg-[#0f172a] border rounded-lg p-6" style="border-color: var(--border)">
@@ -563,8 +587,9 @@
       </div>
     </div>
 
+    <!-- Script principal de la aplicación -->
     <script type="module" src="./main.js?v=25"></script>
   </body>
-  </html>
+</html>
 
 
