@@ -548,7 +548,7 @@ async function checkUserHasForm(user) {
 // Estado de autenticación
 async function updateAuthUI(user) {
   currentUser = user;
-  
+
   if (user) {
     // Usuario logueado
     const btnLogin = document.getElementById('btn-login');
@@ -569,15 +569,21 @@ async function updateAuthUI(user) {
     
     // Verificar si es admin
     await checkUserAdminStatus(user);
-    
-    // Verificar si ya tiene formulario y cambiar sección por defecto
-    const hasForm = await checkUserHasForm(user);
-    if (hasForm) {
-      // Si ya tiene formulario, mostrar Videos por defecto
-      switchTo('videos');
-    } else {
-      // Si no tiene formulario, mostrar Formulario por defecto
+
+    // Si se viene de la página de alumnos, ir directo al formulario
+    if (localStorage.getItem('go_to_form') === 'true') {
+      localStorage.removeItem('go_to_form');
       switchTo('formulario');
+    } else {
+      // Verificar si ya tiene formulario y cambiar sección por defecto
+      const hasForm = await checkUserHasForm(user);
+      if (hasForm) {
+        // Si ya tiene formulario, mostrar Videos por defecto
+        switchTo('videos');
+      } else {
+        // Si no tiene formulario, mostrar Formulario por defecto
+        switchTo('formulario');
+      }
     }
     
   } else {

@@ -63,12 +63,14 @@ function renderList(items){
     btn.addEventListener('click', ()=>{
       const idx = Number(btn.getAttribute('data-idx'));
       const selected = items[idx];
-      try { 
-        localStorage.setItem('fill_form_data', JSON.stringify(selected||{})); 
+      try {
+        localStorage.setItem('fill_form_data', JSON.stringify(selected||{}));
         // Guardar también el ID del alumno para las notas
         if (selected && selected.id) {
           localStorage.setItem('current_alumno_id', selected.id);
         }
+        // Indicar que se debe ir al formulario
+        localStorage.setItem('go_to_form', 'true');
       } catch {}
       window.location.href = './';
     });
