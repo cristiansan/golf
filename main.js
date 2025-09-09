@@ -1,4 +1,4 @@
-// ===== GOLF APP - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.2 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
@@ -6,6 +6,24 @@
 // - Sistema de videos y links
 // - Generador de QR
 // - Funcionalidades de administrador
+//
+// === CHANGELOG v1.2 ===
+// ✅ CORRECCIÓN CRÍTICA: Videos admin - Solucionado problema de persistencia
+//    - Videos aparecían y desaparecían después de refrescar página
+//    - Eliminación mejorada con sincronización forzada desde Firebase
+//    - Resueltas condiciones de carrera entre autenticación y carga de videos
+//    - Videos eliminados ya no reaparecen por conflictos de sincronización
+//
+// ✅ MEJORA: Exportación de alumnos (CSV)
+//    - Agregado botón de descarga CSV en listado de alumnos (/alumnos.html)
+//    - Exporta todos los campos del formulario (20 campos completos)
+//    - Formato CSV compatible con Excel con codificación UTF-8
+//    - Escapado correcto de caracteres especiales y comas
+//
+// ✅ UX: Removido modal molesto después de agregar videos
+//    - Ya no aparece ventana con instrucciones de consola
+//    - Código de sincronización sigue disponible en consola para desarrolladores
+//    - Flujo más limpio: agregar video → mensaje de éxito → listo
 
 // Inicialización de iconos Lucide
 document.addEventListener('DOMContentLoaded', () => { 
@@ -106,8 +124,13 @@ function switchTo(target){
   
   // Renderizar videos cuando se cambie a la sección de videos
   if (target === 'videos') {
-    console.log('[switchTo] 🎬 cambiando a sección videos, renderizando videos');
+    console.log('[switchTo] 🎬 cambiando a sección videos');
+    console.log('[switchTo] 🔍 estado actual - usuario:', !!currentUser, 'admin:', isUserAdmin);
+    
+    // Renderizar videos con un pequeño delay para asegurar que el DOM esté listo
+    // y que el estado admin se haya determinado
     setTimeout(() => {
+      console.log('[switchTo] 🎬 renderizando videos desde switchTo');
       renderVideos();
     }, 100);
   }
@@ -488,6 +511,17 @@ function updateAdminUI(isAdmin) {
     initNotasFunctionality();
   } else {
     console.log('[admin] ❌ usuario no es admin, no se inicializa funcionalidad de notas');
+  }
+  
+  // CRÍTICO: Re-renderizar videos después de determinar el estado admin
+  // Esto evita el problema de que los videos aparezcan y desaparezcan
+  console.log('[admin] 🎬 Re-renderizando videos con nuevo estado admin:', isAdmin);
+  const videosGrid = document.getElementById('videos-grid');
+  if (videosGrid && document.getElementById('sec-videos')?.classList.contains('active')) {
+    console.log('[admin] 🔄 videos-grid visible, re-renderizando videos...');
+    setTimeout(() => {
+      renderVideos();
+    }, 100);
   }
 }
 
@@ -969,11 +1003,553 @@ document.getElementById('btn-next')?.addEventListener('click',()=>showTab(curren
 
 // ===== SISTEMA DE LINKS Y VIDEOS DE YOUTUBE =====
 // Links YouTube
-const state = { links: JSON.parse(localStorage.getItem('yt_links')||'[]') };
+const state = { links: [] };
 const elGrid = document.getElementById('links-grid');
 const elSearch = document.getElementById('links-search');
 const elTag = document.getElementById('links-tag');
 const elOrder = document.getElementById('links-order');
+
+// Función para cargar videos desde Firebase usando múltiples enfoques
+async function loadVideosFromFirebase() {
+  try {
+    console.log('[videos] 🔍 iniciando carga de videos desde Firebase...');
+    console.log('[videos] 👤 usuario actual:', currentUser?.email);
+    console.log('[videos] 🔐 es admin:', isUserAdmin);
+    
+    let allVideosFound = [];
+    
+    // Método 1: Intentar cargar desde colección formularios con tipo video
+    try {
+      console.log('[videos] 📋 método 1: buscando en colección formularios...');
+      const videosQuery = query(
+        collection(db, 'formularios'),
+        where('tipo', '==', 'video')
+      );
+      
+      const querySnapshot = await getDocs(videosQuery);
+      const videos = [];
+      
+      console.log('[videos] 📄 documentos encontrados en formularios:', querySnapshot.docs.length);
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('[videos] 📝 documento formulario:', doc.id, data);
+        
+        // Si es un documento normal de video
+        if (data.tipo === 'video' && !data.deleted) {
+          videos.push({ 
+            id: doc.id, 
+            url: data.url,
+            title: data.title,
+            tags: data.tags || [],
+            addedBy: data.addedBy,
+            addedByEmail: data.addedByEmail,
+            createdAt: data.createdAt,
+            source: 'formularios'
+          });
+        }
+        
+        // Si es un documento de videos_compartidos
+        if (data.tipo === 'videos_compartidos' && data.videos && Array.isArray(data.videos)) {
+          console.log('[videos] 📦 documento videos_compartidos encontrado con', data.videos.length, 'videos');
+          const sharedVideos = data.videos.filter(video => !video.deleted);
+          sharedVideos.forEach(video => {
+            video.source = 'videos_compartidos';
+            console.log('[videos] 🔗 video compartido:', video);
+            videos.push(video);
+          });
+        }
+      });
+      
+      if (videos.length > 0) {
+        console.log('[videos] ✅ videos encontrados en formularios:', videos.length);
+        allVideosFound = [...allVideosFound, ...videos];
+      } else {
+        console.log('[videos] ❌ no hay videos en formularios');
+      }
+      
+      // NO hacer return aquí - siempre revisar todos los métodos
+    } catch (error1) {
+      console.log('[videos] ❌ método formularios falló:', error1.message);
+    }
+    
+    // Método 2A: Si soy admin, leer desde mi propio documento Y desde localStorage
+    if (currentUser && isUserAdmin) {
+      try {
+        console.log('[videos] 👤 método 2A: leyendo mi propio documento de usuario admin...');
+        const myUserDoc = doc(db, 'usuarios', currentUser.uid);
+        const myUserSnap = await getDoc(myUserDoc);
+        
+        if (myUserSnap.exists()) {
+          const myUserData = myUserSnap.data();
+          console.log('[videos] 📄 mi documento existe, videos:', myUserData.videos?.length || 0);
+          
+          if (myUserData.videos && Array.isArray(myUserData.videos)) {
+            const myVideos = myUserData.videos.filter(video => !video.deleted);
+            console.log('[videos] 🎬 mis videos válidos de Firebase:', myVideos.length);
+            myVideos.forEach(video => {
+              video.source = 'mi_documento_admin';
+              console.log('[videos] 📹 mi video de Firebase:', video);
+            });
+            allVideosFound = [...allVideosFound, ...myVideos];
+          }
+        } else {
+          console.log('[videos] 📄 mi documento no existe');
+        }
+        
+        // ADEMÁS, como admin también cargar desde localStorage (por si hay videos recientes)
+        console.log('[videos] 💾 como admin, también revisando localStorage...');
+        const myLocalVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+        console.log('[videos] 📱 videos en mi localStorage:', myLocalVideos.length);
+        
+        myLocalVideos.forEach(video => {
+          // Solo agregar si no está duplicado por URL
+          if (!allVideosFound.some(v => v.url === video.url)) {
+            video.source = 'mi_localStorage';
+            console.log('[videos] 🏠 mi video local:', video);
+            allVideosFound.push(video);
+          }
+        });
+        
+      } catch (error2A) {
+        console.log('[videos] ❌ error leyendo mi documento:', error2A.message);
+        
+        // Si falla Firebase, al menos usar localStorage
+        console.log('[videos] 💾 fallback: usando solo localStorage para admin...');
+        try {
+          const localVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+          localVideos.forEach(video => {
+            video.source = 'localStorage_fallback';
+            allVideosFound.push(video);
+          });
+          console.log('[videos] 📱 videos cargados desde localStorage fallback:', localVideos.length);
+        } catch (localError) {
+          console.log('[videos] ❌ error también con localStorage fallback:', localError.message);
+        }
+      }
+    }
+    
+    // Método 2B: Intentar leer desde colección videos_publicos
+    try {
+      console.log('[videos] 🌍 método 2B: buscando en colección videos_publicos...');
+      const publicQuery = query(collection(db, 'videos_publicos'));
+      const publicSnapshot = await getDocs(publicQuery);
+      
+      console.log('[videos] 📢 videos públicos encontrados:', publicSnapshot.docs.length);
+      
+      publicSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('[videos] 📝 video público:', doc.id, data);
+        
+        if (!data.deleted) {
+          const publicVideo = {
+            id: data.publicId || doc.id, // Usar el ID original si está disponible
+            url: data.url,
+            title: data.title,
+            tags: data.tags || [],
+            addedBy: data.addedBy,
+            addedByEmail: data.addedByEmail,
+            createdAt: data.createdAt,
+            source: 'videos_publicos'
+          };
+          
+          console.log('[videos] 📹 video público procesado:', publicVideo);
+          allVideosFound = [...allVideosFound, publicVideo];
+        }
+      });
+    } catch (error2B) {
+      console.log('[videos] ❌ método videos_publicos falló:', error2B.message);
+      
+      // Fallback: Para usuarios regulares, intentar leer documentos conocidos de admin
+      if (currentUser && !isUserAdmin) {
+        try {
+          console.log('[videos] 👥 fallback: usuario regular buscando documentos admin...');
+          const knownAdminUIDs = ['xdn0qepExUdXehb2PNrjzEn0nAj1']; // Tu UID de admin
+          
+          for (const adminUID of knownAdminUIDs) {
+            try {
+              const adminDoc = doc(db, 'usuarios', adminUID);
+              const adminSnap = await getDoc(adminDoc);
+              
+              if (adminSnap.exists()) {
+                const adminData = adminSnap.data();
+                console.log('[videos] 📄 documento admin encontrado:', {
+                  uid: adminUID,
+                  email: adminData.email,
+                  hasVideos: !!adminData.videos,
+                  videosCount: adminData.videos?.length || 0
+                });
+                
+                if (adminData.videos && Array.isArray(adminData.videos)) {
+                  const adminVideos = adminData.videos.filter(video => !video.deleted);
+                  console.log('[videos] 🎬 videos de admin válidos:', adminVideos.length);
+                  adminVideos.forEach(video => {
+                    video.source = 'documento_admin';
+                    console.log('[videos] 📹 video de admin:', video);
+                  });
+                  allVideosFound = [...allVideosFound, ...adminVideos];
+                }
+              }
+            } catch (docError) {
+              console.log('[videos] ❌ error leyendo documento admin:', adminUID, docError.message);
+            }
+          }
+        } catch (fallbackError) {
+          console.log('[videos] ❌ fallback también falló:', fallbackError.message);
+        }
+      }
+    }
+    
+    // Método 3: Cargar desde localStorage
+    try {
+      console.log('[videos] 💾 método 3: buscando en localStorage...');
+      const localVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+      console.log('[videos] 📱 videos en localStorage:', localVideos.length);
+      
+      localVideos.forEach(video => {
+        video.source = 'localStorage';
+        console.log('[videos] 🏠 video local:', video);
+      });
+      
+      allVideosFound = [...allVideosFound, ...localVideos];
+    } catch (error3) {
+      console.log('[videos] ❌ método localStorage falló:', error3.message);
+    }
+    
+    // Eliminar duplicados basados en URL
+    const uniqueVideos = allVideosFound.reduce((acc, video) => {
+      if (!acc.some(v => v.url === video.url)) {
+        acc.push(video);
+      }
+      return acc;
+    }, []);
+    
+    state.links = uniqueVideos;
+    console.log('[videos] 🎯 total de videos únicos cargados:', uniqueVideos.length);
+    console.log('[videos] 📊 fuentes:', uniqueVideos.map(v => v.source));
+    
+    return uniqueVideos;
+    
+  } catch (error) {
+    console.error('[videos] error general cargando videos:', error);
+    return [];
+  }
+}
+
+// Función para guardar video en Firebase usando múltiples métodos
+async function saveVideoToFirebase(videoData) {
+  try {
+    console.log('[videos] guardando video en Firebase:', videoData);
+    console.log('[videos] currentUser:', currentUser);
+    
+    // Verificar que tenemos usuario autenticado
+    if (!currentUser) {
+      throw new Error('No hay usuario autenticado');
+    }
+    
+    // Método 1: Intentar guardar en colección formularios
+    try {
+      console.log('[videos] 📋 método 1: intentando guardar en colección formularios...');
+      const videoDoc = {
+        tipo: 'video',
+        url: videoData.url,
+        title: videoData.title,
+        tags: videoData.tags || [],
+        addedBy: videoData.addedBy || currentUser.uid,
+        addedByEmail: videoData.addedByEmail || currentUser.email,
+        ownerUid: currentUser.uid,
+        createdAt: serverTimestamp(),
+        deleted: false
+      };
+      
+      console.log('[videos] 📝 documento a guardar en formularios:', videoDoc);
+      const docRef = await addDoc(collection(db, 'formularios'), videoDoc);
+      
+      const newVideo = {
+        id: docRef.id,
+        ...videoData,
+        createdAt: new Date().toISOString(),
+        source: 'formularios'
+      };
+      
+      state.links.push(newVideo);
+      console.log('[videos] ✅ video guardado exitosamente en formularios con ID:', docRef.id);
+      return docRef.id;
+      
+    } catch (formularioError) {
+      console.log('[videos] error en formularios, intentando documento usuario...', formularioError.message);
+      
+      // Método 2: Guardar en el documento del usuario admin
+      try {
+        console.log('[videos] 👤 método 2: intentando guardar en documento de usuario...');
+        const userDocRef = doc(db, 'usuarios', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        const newVideo = {
+          id: Date.now().toString(),
+          url: videoData.url,
+          title: videoData.title,
+          tags: videoData.tags || [],
+          addedBy: currentUser.uid,
+          addedByEmail: currentUser.email,
+          createdAt: new Date().toISOString(),
+          deleted: false
+        };
+        
+        let existingVideos = [];
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          existingVideos = userData.videos || [];
+          console.log('[videos] 📊 videos existentes en documento usuario:', existingVideos.length);
+        } else {
+          console.log('[videos] 📄 documento de usuario no existe, se creará');
+        }
+        
+        existingVideos.push(newVideo);
+        console.log('[videos] 📝 guardando video en documento usuario:', newVideo);
+        
+        await updateDoc(userDocRef, { videos: existingVideos });
+        
+        // ADEMÁS, sincronizar con un documento especial en formularios
+        try {
+          console.log('[videos] 🔄 sincronizando con documento videos_compartidos...');
+          
+          // Buscar el documento especial de videos compartidos
+          const videosSharedQuery = query(
+            collection(db, 'formularios'), 
+            where('tipo', '==', 'videos_compartidos'),
+            where('ownerUid', '==', currentUser.uid)
+          );
+          
+          const videosSharedSnapshot = await getDocs(videosSharedQuery);
+          
+          let sharedVideos = [];
+          let sharedDocRef = null;
+          
+          if (!videosSharedSnapshot.empty) {
+            // Ya existe el documento de videos compartidos
+            const sharedDoc = videosSharedSnapshot.docs[0];
+            sharedDocRef = sharedDoc.ref;
+            const sharedData = sharedDoc.data();
+            sharedVideos = sharedData.videos || [];
+            console.log('[videos] 📄 documento videos_compartidos encontrado, videos actuales:', sharedVideos.length);
+          }
+          
+          // Agregar el nuevo video a la lista
+          const videoForShared = {
+            id: newVideo.id,
+            url: newVideo.url,
+            title: newVideo.title,
+            tags: newVideo.tags,
+            addedBy: currentUser.uid,
+            addedByEmail: currentUser.email,
+            createdAt: newVideo.createdAt,
+            deleted: false
+          };
+          
+          sharedVideos.push(videoForShared);
+          
+          if (sharedDocRef) {
+            // Actualizar documento existente
+            await updateDoc(sharedDocRef, { videos: sharedVideos, updatedAt: serverTimestamp() });
+            console.log('[videos] 🔄 documento videos_compartidos actualizado');
+          } else {
+            // Crear nuevo documento
+            const newSharedDoc = {
+              tipo: 'videos_compartidos',
+              ownerUid: currentUser.uid,
+              videos: sharedVideos,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            };
+            
+            await addDoc(collection(db, 'formularios'), newSharedDoc);
+            console.log('[videos] 📄 nuevo documento videos_compartidos creado');
+          }
+          
+        } catch (sharedError) {
+          console.log('[videos] ⚠️ error sincronizando con videos_compartidos:', sharedError.message);
+          // No es crítico, el video ya se guardó en el documento usuario
+        }
+        
+        newVideo.source = 'usuario_admin';
+        state.links.push(newVideo);
+        console.log('[videos] ✅ video guardado exitosamente en documento usuario con ID:', newVideo.id);
+        
+        // FORZAR sincronización: Guardar TODOS los videos del documento en localStorage
+        try {
+          console.log('[videos] 🔄 sincronizando TODOS mis videos a localStorage...');
+          
+          // Tomar todos los videos del documento usuario como fuente de verdad
+          const allMyVideos = existingVideos.filter(video => !video.deleted);
+          
+          // Reemplazar completamente el localStorage con los videos de Firebase
+          localStorage.setItem('yt_links', JSON.stringify(allMyVideos));
+          console.log('[videos] 📱 localStorage actualizado con', allMyVideos.length, 'videos desde Firebase');
+          
+          // Actualizar también el estado local
+          state.links = [...allMyVideos];
+          
+        } catch (localError) {
+          console.log('[videos] ⚠️ no se pudo sincronizar localStorage:', localError.message);
+        }
+        
+        return newVideo.id;
+        
+      } catch (userError) {
+        console.log('[videos] error también en documento usuario:', userError.message);
+        throw userError; // Pasar al fallback de localStorage
+      }
+    }
+    
+  } catch (error) {
+    console.error('[videos] todos los métodos Firebase fallaron:', error.message);
+    
+    // Fallback: Guardar en localStorage
+    try {
+      console.log('[videos] guardando en localStorage como fallback...');
+      const localVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+      const newLocalVideo = {
+        id: Date.now().toString(),
+        ...videoData,
+        createdAt: new Date().toISOString(),
+        savedLocally: true
+      };
+      
+      localVideos.push(newLocalVideo);
+      localStorage.setItem('yt_links', JSON.stringify(localVideos));
+      state.links.push(newLocalVideo);
+      
+      console.log('[videos] video guardado en localStorage con ID:', newLocalVideo.id);
+      alert('Video guardado localmente. Será sincronizado cuando se resuelvan los permisos.');
+      return newLocalVideo.id;
+      
+    } catch (localError) {
+      console.error('[videos] error también en localStorage:', localError);
+      throw new Error('No se pudo guardar el video en ningún lado');
+    }
+  }
+}
+
+// Función para eliminar video usando múltiples métodos
+async function deleteVideoFromFirebase(videoId) {
+  let firebaseDeletedSuccessfully = false;
+  
+  try {
+    console.log('[videos] eliminando video:', videoId);
+    
+    // Encontrar el video en el estado local para ver su origen
+    const videoToDelete = state.links.find(v => v.id === videoId);
+    if (!videoToDelete) {
+      throw new Error('Video no encontrado en estado local');
+    }
+    
+    console.log('[videos] video a eliminar:', videoToDelete);
+    
+    // Método 1: Si el video viene de la colección formularios (ID de Firestore)
+    if (videoToDelete.id && videoToDelete.id.length > 15 && !videoToDelete.savedLocally) {
+      try {
+        console.log('[videos] intentando eliminar de formularios...');
+        const videoDoc = doc(db, 'formularios', videoId);
+        await updateDoc(videoDoc, { deleted: true });
+        console.log('[videos] ✅ video eliminado de formularios');
+        firebaseDeletedSuccessfully = true;
+      } catch (formularioError) {
+        console.log('[videos] ❌ error eliminando de formularios:', formularioError.message);
+        // Continuar con otros métodos
+      }
+    }
+    
+    // Método 2: Buscar y eliminar de documentos de usuarios admin
+    if (!firebaseDeletedSuccessfully) {
+      try {
+        console.log('[videos] intentando eliminar de mi documento de usuario...');
+        
+        // Solo intentar eliminar de MI documento de usuario (más eficiente y seguro)
+        if (currentUser) {
+          const myUserDoc = doc(db, 'usuarios', currentUser.uid);
+          const myUserSnap = await getDoc(myUserDoc);
+          
+          if (myUserSnap.exists()) {
+            const myUserData = myUserSnap.data();
+            if (myUserData.videos && Array.isArray(myUserData.videos)) {
+              const videoIndex = myUserData.videos.findIndex(v => v.id === videoId);
+              if (videoIndex !== -1) {
+                console.log('[videos] video encontrado en mi documento');
+                
+                // Marcar como eliminado en lugar de borrar
+                myUserData.videos[videoIndex].deleted = true;
+                
+                await updateDoc(myUserDoc, {
+                  videos: myUserData.videos
+                });
+                
+                console.log('[videos] ✅ video eliminado de mi documento usuario');
+                firebaseDeletedSuccessfully = true;
+              }
+            }
+          }
+        }
+      } catch (userError) {
+        console.log('[videos] ❌ error eliminando de mi documento usuario:', userError.message);
+      }
+    }
+    
+    // Método 3: Eliminar de localStorage si existe
+    try {
+      const localVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+      const filteredVideos = localVideos.filter(v => v.id !== videoId);
+      
+      if (localVideos.length !== filteredVideos.length) {
+        localStorage.setItem('yt_links', JSON.stringify(filteredVideos));
+        console.log('[videos] video eliminado de localStorage');
+      }
+    } catch (localError) {
+      console.log('[videos] error eliminando de localStorage:', localError.message);
+    }
+    
+    // Actualizar estado local
+    state.links = state.links.filter(v => v.id !== videoId);
+    console.log('[videos] video eliminado del estado local');
+    
+    // IMPORTANTE: Solo sincronizar con Firebase si se pudo eliminar allí
+    // Si no se pudo eliminar de Firebase, mantener el localStorage como está (sin el video)
+    if (firebaseDeletedSuccessfully && currentUser && isUserAdmin) {
+      try {
+        console.log('[videos] 🔄 eliminación exitosa en Firebase, sincronizando...');
+        const myUserDoc = doc(db, 'usuarios', currentUser.uid);
+        const myUserSnap = await getDoc(myUserDoc);
+        
+        if (myUserSnap.exists()) {
+          const myUserData = myUserSnap.data();
+          if (myUserData.videos && Array.isArray(myUserData.videos)) {
+            const validVideos = myUserData.videos.filter(video => !video.deleted);
+            
+            // Reemplazar completamente localStorage y estado con la fuente de verdad de Firebase
+            localStorage.setItem('yt_links', JSON.stringify(validVideos));
+            state.links = [...validVideos];
+            
+            console.log('[videos] 🔄 sincronización post-eliminación: localStorage actualizado con', validVideos.length, 'videos desde Firebase');
+          }
+        }
+      } catch (syncError) {
+        console.log('[videos] ⚠️ no se pudo sincronizar después de eliminar:', syncError.message);
+      }
+    } else if (!firebaseDeletedSuccessfully) {
+      console.log('[videos] 🚫 no se pudo eliminar de Firebase, manteniendo eliminación solo local');
+      console.log('[videos] 📱 localStorage y estado mantienen la eliminación local del video');
+    }
+    
+  } catch (error) {
+    console.error('[videos] error eliminando video:', error);
+    
+    // Como último recurso, al menos eliminarlo del estado local
+    state.links = state.links.filter(v => v.id !== videoId);
+    console.log('[videos] video eliminado solo del estado local como fallback');
+    
+    throw error;
+  }
+}
 
 // Función para extraer ID de video de YouTube desde URL
 function youtubeId(url){ 
@@ -1068,10 +1644,19 @@ function renderLinks(){
     btn.addEventListener('click', async()=>{
       if(act==='open') window.open(item.url,'_blank');
       if(act==='copy') await navigator.clipboard.writeText(item.url);
-      if(act==='del'){
-        state.links = state.links.filter(x=>x.id!==item.id);
-        localStorage.setItem('yt_links', JSON.stringify(state.links));
-        renderLinks();
+      if(act==='del' && isUserAdmin){
+        if(confirm('¿Estás seguro de que quieres eliminar este video?')) {
+          try {
+            await deleteVideoFromFirebase(item.id);
+            renderLinks();
+            console.log('[videos] video eliminado y lista actualizada');
+          } catch (error) {
+            console.error('[videos] error en el proceso de eliminación:', error);
+            // Intentar actualizar la lista de todos modos por si se eliminó parcialmente
+            renderLinks();
+            alert('El video fue eliminado localmente. Puede que persista en Firebase debido a permisos.');
+          }
+        }
       }
     });
   });
@@ -1081,7 +1666,7 @@ function renderLinks(){
 // Agregar nuevo link (solo para admin)
 const btnAddLink = document.getElementById('btn-add-link');
 if (btnAddLink) {
-  btnAddLink.addEventListener('click', () => {
+  btnAddLink.addEventListener('click', async () => {
     if (!isUserAdmin) {
       alert('Solo los administradores pueden agregar videos');
       return;
@@ -1096,18 +1681,59 @@ if (btnAddLink) {
     const tags = prompt('Ingresa las etiquetas separadas por coma:');
     const tagsArray = tags ? tags.split(',').map(t => t.trim()).filter(t => t) : [];
     
-    const newLink = {
-      id: Date.now(),
+    const newVideo = {
       url: url,
       title: title,
       tags: tagsArray,
-      createdAt: Date.now()
+      addedBy: currentUser.uid,
+      addedByEmail: currentUser.email
     };
     
-    state.links.push(newLink);
-    localStorage.setItem('yt_links', JSON.stringify(state.links));
-    renderLinks();
+    try {
+      btnAddLink.disabled = true;
+      btnAddLink.textContent = 'Guardando...';
+      
+      await saveVideoToFirebase(newVideo);
+      renderLinks();
+      
+      // Generar código de sincronización para usuarios regulares
+      if (isUserAdmin) {
+        generateSyncCode();
+      }
+      
+      alert('Video agregado exitosamente');
+    } catch (error) {
+      alert('Error al guardar el video');
+    } finally {
+      btnAddLink.disabled = false;
+      btnAddLink.textContent = 'Agregar Video';
+    }
   });
+}
+
+// Función para generar código de sincronización para usuarios
+function generateSyncCode() {
+  try {
+    console.log('[videos] 🔗 generando código de sincronización...');
+    
+    // Obtener todos los videos del admin desde localStorage
+    const adminVideos = JSON.parse(localStorage.getItem('yt_links') || '[]');
+    
+    if (adminVideos.length === 0) {
+      console.log('[videos] ⚠️ no hay videos para sincronizar');
+      return;
+    }
+    
+    // Crear código de sincronización compacto
+    const syncCode = `localStorage.setItem('yt_links',JSON.stringify(${JSON.stringify(adminVideos)}));alert('Videos sincronizados! Refresca la página.');`;
+
+    console.log('[videos] 📋 código de sincronización generado');
+    console.log('%c🔗 CÓDIGO PARA USUARIOS REGULARES (copia y pega en su consola):', 'font-weight: bold; color: #22c55e; font-size: 14px;');
+    console.log('%c' + syncCode, 'background: #1f2937; color: #22c55e; padding: 10px; border-radius: 5px; font-family: monospace;');
+    
+  } catch (error) {
+    console.error('[videos] ❌ error generando código de sincronización:', error);
+  }
 }
 
 // ===== INICIALIZACIÓN Y CONFIGURACIÓN =====
@@ -1116,11 +1742,14 @@ showTab(0);
 
 // Solo inicializar links si los elementos existen
 if (elGrid) {
-  renderLinks();
+  // Cargar videos desde Firebase al inicializar
+  loadVideosFromFirebase().then(() => {
+    renderLinks();
+  });
   
   // Agregar event listeners solo si los elementos existen
   if (elSearch) elSearch.addEventListener('input', renderLinks);
-  if (elTag) elSearch.addEventListener('change', renderLinks);
+  if (elTag) elTag.addEventListener('change', renderLinks);
   if (elOrder) elOrder.addEventListener('change', renderLinks);
 }
 
@@ -1270,7 +1899,7 @@ function initVideosSection() {
 }
 
 // Función para renderizar videos (solo lectura para usuarios comunes)
-function renderVideos() {
+async function renderVideos() {
   console.log('[videos] 🔍 renderVideos llamado');
   
   const videosGrid = document.getElementById('videos-grid');
@@ -1282,9 +1911,10 @@ function renderVideos() {
   }
   
   try {
-    const videos = JSON.parse(localStorage.getItem('yt_links') || '[]');
-    console.log('[videos] ✅ videos encontrados en localStorage:', videos.length);
-    console.log('[videos] 🔍 contenido de videos:', videos);
+    // Cargar videos desde Firebase
+    console.log('[videos] 📥 cargando videos desde Firebase...');
+    const videos = await loadVideosFromFirebase();
+    console.log('[videos] ✅ videos cargados desde Firebase:', videos.length);
     
     if (videos.length === 0) {
       console.log('[videos] 📝 no hay videos, mostrando mensaje');

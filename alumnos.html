@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Alumnos — Golf App</title>
+    <title>Alumnos — Golf App v1.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,7 +23,13 @@
       <section class="card-surface">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-base font-semibold">Listado (orden alfabético)</h2>
-          <div id="count" class="text-sm muted"></div>
+          <div class="flex items-center gap-3">
+            <button id="download-csv" class="px-3 py-2 rounded-md border btn flex items-center gap-2" style="border-color: var(--border)">
+              <i data-lucide="download"></i>
+              Descargar CSV
+            </button>
+            <div id="count" class="text-sm muted"></div>
+          </div>
         </div>
         <div class="mb-3">
           <input id="filtro" class="input-base" placeholder="Filtrar por nombre" />

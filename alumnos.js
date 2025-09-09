@@ -1,4 +1,10 @@
+// === GOLF APP v1.2 - PÁGINA DE ALUMNOS ===
 // Página de Alumnos: lista documentos de 'formularios' ordenados por nombre
+// 
+// NUEVO en v1.2:
+// ✅ Funcionalidad de exportación CSV completa
+// ✅ Botón de descarga con todos los campos del formulario
+// ✅ Soporte UTF-8 y formato compatible con Excel
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
@@ -20,6 +26,7 @@ const db = getFirestore(fbApp);
 // Variables globales para el estado de admin
 let currentUser = null;
 let isUserAdmin = false;
+let allAlumnos = []; // Guardar todos los alumnos para la exportación
 
 // Verificar si el usuario es admin desde Firestore
 async function checkUserAdminStatus(user) {
@@ -103,6 +110,7 @@ async function loadAlumnos(){
     }
     const items = docsSnap.docs.map(d=>({ id: d.id, ...(d.data()||{}) }));
     const sorted = sortByNombreAsc(items);
+    allAlumnos = sorted; // Guardar para exportación
     renderList(sorted);
     initFilter(sorted);
   } catch (e) {
@@ -171,8 +179,82 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// Funciones de exportación
+function exportToCSV() {
+  if (allAlumnos.length === 0) {
+    alert('No hay datos para exportar');
+    return;
+  }
+
+  // Definir las columnas que queremos exportar basadas en los datos reales
+  const columns = [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'email', label: 'Email' },
+    { key: 'telefono', label: 'Teléfono' },
+    { key: 'edad', label: 'Edad' },
+    { key: 'nacimiento', label: 'Fecha Nacimiento' },
+    { key: 'domicilio', label: 'Domicilio' },
+    { key: 'ciudad', label: 'Ciudad' },
+    { key: 'nacionalidad', label: 'Nacionalidad' },
+    { key: 'ocupacion', label: 'Ocupación' },
+    { key: 'handicap', label: 'Handicap' },
+    { key: 'frecuencia', label: 'Frecuencia' },
+    { key: 'modalidad', label: 'Modalidad' },
+    { key: 'club', label: 'Club' },
+    { key: 'anios', label: 'Años Experiencia' },
+    { key: 'clases_previas', label: 'Clases Previas' },
+    { key: 'apto', label: 'Apto Médico' },
+    { key: 'apto_vto', label: 'Vto Apto Médico' },
+    { key: 'alergias', label: 'Alergias' },
+    { key: 'lesiones', label: 'Lesiones' },
+    { key: 'condicion', label: 'Condición Médica' }
+  ];
+
+  // Crear el contenido CSV
+  let csvContent = columns.map(col => col.label).join(',') + '\n';
+  
+  allAlumnos.forEach(alumno => {
+    const row = columns.map(col => {
+      let value = alumno[col.key] || '';
+      // Escapar comillas y envolver en comillas si contiene comas
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+        value = '"' + value.replace(/"/g, '""') + '"';
+      }
+      return value;
+    });
+    csvContent += row.join(',') + '\n';
+  });
+
+  // Descargar el archivo
+  downloadFile(csvContent, 'alumnos.csv', 'text/csv;charset=utf-8;');
+}
+
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+function initDownloadButton() {
+  const downloadCSV = document.getElementById('download-csv');
+
+  if (downloadCSV) {
+    downloadCSV.addEventListener('click', () => {
+      exportToCSV();
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', ()=>{
   window.lucide?.createIcons();
+  initDownloadButton();
   
   // Si ya hay un usuario logueado, verificar admin
   if (auth.currentUser) {
