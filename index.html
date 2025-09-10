@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Golf App v1.2 — Formulario, Links y QR</title>
+    <title>Golf App v1.3 — Formulario, Links y QR</title>
     
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,6 +74,7 @@
         <nav class="p-2 space-y-1" style="margin-top: 25px;">
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="formulario">Formulario</button>
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="videos">Videos</button>
+          <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="reserva">Reserva</button>
           <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="qr">QR</button>
           
           <!-- Sección de administrador (oculta por defecto) -->
@@ -92,7 +93,7 @@
             <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
               <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
             </button>
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.2</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.3</button>
           </div>
         </div>
       </div>
@@ -304,6 +305,61 @@
         <div id="videos-grid" class="grid-cards"></div>
       </section>
 
+      <!-- ===== SECCIÓN: RESERVA ===== -->
+      <!-- Sistema de reserva de clases con calendario y pago -->
+      <section id="sec-reserva" class="card-surface hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold">Reservar Clase</h2>
+          <div class="text-sm muted">1 hora - $15.000</div>
+        </div>
+        
+        <!-- Calendario responsive -->
+        <div id="calendar-container" class="mb-4">
+          <div id="calendar-header" class="flex items-center justify-between mb-4">
+            <button id="prev-month" class="p-2 rounded-md border btn" style="border-color: var(--border)">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <div id="current-month" class="font-medium"></div>
+            <button id="next-month" class="p-2 rounded-md border btn" style="border-color: var(--border)">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+          
+          <!-- Grid del calendario -->
+          <div id="calendar-grid" class="grid grid-cols-7 gap-1 mb-4">
+            <!-- Días de la semana -->
+            <div class="text-center text-sm font-medium p-2 muted">Dom</div>
+            <div class="text-center text-sm font-medium p-2 muted">Lun</div>
+            <div class="text-center text-sm font-medium p-2 muted">Mar</div>
+            <div class="text-center text-sm font-medium p-2 muted">Mié</div>
+            <div class="text-center text-sm font-medium p-2 muted">Jue</div>
+            <div class="text-center text-sm font-medium p-2 muted">Vie</div>
+            <div class="text-center text-sm font-medium p-2 muted">Sáb</div>
+          </div>
+        </div>
+        
+        <!-- Horarios disponibles -->
+        <div id="time-slots" class="hidden mb-4">
+          <h3 class="font-medium mb-2">Horarios disponibles:</h3>
+          <div id="time-grid" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+        </div>
+        
+        <!-- Resumen de reserva -->
+        <div id="booking-summary" class="hidden p-3 rounded-md border mb-4" style="border-color: var(--border); background: var(--card);">
+          <div class="font-medium mb-2">Resumen de reserva:</div>
+          <div id="booking-details" class="text-sm space-y-1 muted"></div>
+          <div class="flex items-center justify-between pt-2 mt-2 border-t" style="border-color: var(--border);">
+            <span class="font-medium">Total: $15.000</span>
+            <span class="text-sm muted">Seña requerida: $7.500 (50%)</span>
+          </div>
+        </div>
+        
+        <!-- Botón de confirmar -->
+        <button id="btn-confirm-booking" class="w-full px-4 py-3 rounded-md btn-primary font-medium hidden">
+          Confirmar Reserva
+        </button>
+      </section>
+
       <!-- ===== SECCIÓN: GENERADOR DE QR ===== -->
       <!-- Herramienta para crear códigos QR personalizables -->
       <section id="sec-qr" class="card-surface hidden">
@@ -389,11 +445,22 @@
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-lg">Changelog - v1.2</h3>
+          <h3 class="font-semibold text-lg">Changelog - v1.3</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         
         <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <div class="font-medium mb-1 text-blue-400">v1.3 🚀</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>NUEVA FUNCIONALIDAD:</strong> Sistema de reservas completo con calendario interactivo responsive para móviles, tablets y desktop.</li>
+              <li><strong>CALENDARIO INTELIGENTE:</strong> Selección de fechas con días pasados deshabilitados, horarios disponibles (09:00-18:00) y visualización de slots ocupados.</li>
+              <li><strong>PROCESO DE PAGO:</strong> Modal de confirmación con QR para transferencia bancaria de seña (50% - $7.500) e instrucciones claras paso a paso.</li>
+              <li><strong>SISTEMA PERSISTENTE:</strong> Reservas guardadas localmente con IDs únicos, limpieza automática de reservas expiradas y bloqueo de horarios ya reservados.</li>
+              <li><strong>MOBILE-FIRST:</strong> Modal de pago optimizado para móviles con scroll, diseño responsive y QR ajustado para pantallas pequeñas.</li>
+              <li>Navegación mejorada con nueva opción "Reserva" en el menú principal.</li>
+            </ul>
+          </div>
           <div class="border-b pb-3" style="border-color: var(--border)">
             <div class="font-medium mb-1 text-green-400">v1.2 🎉</div>
             <ul class="list-disc pl-5 space-y-1">
@@ -427,7 +494,7 @@
         </div>
         
         <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
-          <p class="text-sm text-gray-400">Golf App v1.2 - Luciano Sancho Golf</p>
+          <p class="text-sm text-gray-400">Golf App v1.3 - Luciano Sancho Golf</p>
         </div>
       </div>
     </div>
@@ -593,6 +660,60 @@
           
           <button id="btn-validate-admin" class="w-full px-4 py-2 rounded-md btn-primary btn">
             Validar Clave
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL: PAGO DE RESERVA ===== -->
+    <!-- Modal para confirmar pago de seña con QR -->
+    <div id="modal-payment" class="fixed inset-0 z-50 hidden overflow-y-auto">
+      <div id="modal-payment-overlay" class="absolute inset-0 bg-black/70"></div>
+      <div class="relative max-w-md mx-auto my-4 bg-black border rounded-lg p-6" style="border-color: var(--border); min-height: min-content;">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-lg">Confirmar Reserva</h3>
+          <button id="btn-close-payment" class="p-2 rounded-md border btn" style="border-color: var(--border)">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        
+        <!-- Detalles de la reserva -->
+        <div id="payment-booking-details" class="mb-4 p-3 rounded-md border" style="border-color: var(--border); background: var(--card);">
+          <div class="font-medium mb-2">Detalles de la reserva:</div>
+          <div id="payment-details" class="text-sm space-y-1 muted"></div>
+          <div class="flex items-center justify-between pt-2 mt-2 border-t font-medium" style="border-color: var(--border);">
+            <span>Seña requerida:</span>
+            <span class="text-green-400">$7.500 (50%)</span>
+          </div>
+        </div>
+        
+        <!-- QR de pago -->
+        <div class="text-center mb-4">
+          <div class="mb-3">
+            <div class="font-medium mb-1">Escanea el QR para pagar la seña:</div>
+            <div class="text-sm muted">Transferencia bancaria - CBU: 1234567890123456789012</div>
+          </div>
+          <canvas id="payment-qr" class="mx-auto border-2 rounded-lg" style="border-color: var(--border); background: white; width: 200px; height: 200px;"></canvas>
+        </div>
+        
+        <!-- Instrucciones -->
+        <div class="text-sm muted mb-4 p-3 rounded-md border" style="border-color: var(--border); background: #0b1220;">
+          <div class="font-medium text-white mb-2">Instrucciones:</div>
+          <ol class="list-decimal pl-4 space-y-1">
+            <li>Escanea el código QR con tu app bancaria</li>
+            <li>Transfiere $7.500 (50% del total)</li>
+            <li>Guarda el comprobante de pago</li>
+            <li>Tu reserva quedará confirmada</li>
+          </ol>
+        </div>
+        
+        <!-- Botones -->
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btn-cancel-payment" class="px-4 py-2 rounded-md border btn" style="border-color: var(--border)">
+            Cancelar
+          </button>
+          <button id="btn-payment-done" class="px-4 py-2 rounded-md btn-primary font-medium">
+            Ya Pagué
           </button>
         </div>
       </div>

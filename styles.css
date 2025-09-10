@@ -323,4 +323,93 @@ button.primary:hover { background: var(--primary-600); color: #031b0d; }
   }
 }
 
+/* Estilos para el sistema de reservas */
+#calendar-grid {
+  min-height: 200px;
+}
+
+#calendar-grid button {
+  min-height: 40px;
+  font-size: 0.875rem;
+}
+
+#time-grid button {
+  min-height: 48px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Modal de pago - estilos base */
+#modal-payment {
+  backdrop-filter: blur(4px);
+}
+
+#modal-payment .relative {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive para el calendario en móviles */
+@media (max-width: 640px) {
+  #calendar-grid {
+    gap: 2px;
+  }
+  
+  #calendar-grid button {
+    min-height: 36px;
+    font-size: 0.8rem;
+    padding: 4px;
+  }
+  
+  #time-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  #time-grid button {
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+  
+  #booking-summary {
+    font-size: 0.875rem;
+  }
+  
+  /* Modal de pago responsive para móviles */
+  #modal-payment {
+    padding: 1rem;
+  }
+  
+  #modal-payment .relative {
+    margin: 0;
+    max-width: 100%;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  #payment-qr {
+    width: 160px !important;
+    height: 160px !important;
+  }
+  
+  /* Hacer el modal más compacto en móviles */
+  #modal-payment .mb-4 {
+    margin-bottom: 0.75rem;
+  }
+  
+  #modal-payment .p-6 {
+    padding: 1rem !important;
+  }
+  
+  #modal-payment .text-lg {
+    font-size: 1rem !important;
+  }
+}
+
+/* Responsive para tablets */
+@media (min-width: 641px) and (max-width: 1024px) {
+  #time-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 

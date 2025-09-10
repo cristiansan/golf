@@ -1,5 +1,8 @@
-// === GOLF APP v1.2 - PÁGINA DE ALUMNOS ===
+// === GOLF APP v1.3 - PÁGINA DE ALUMNOS ===
 // Página de Alumnos: lista documentos de 'formularios' ordenados por nombre
+// 
+// NUEVO en v1.3:
+// 🚀 Funcionalidad de reservas en app principal
 // 
 // NUEVO en v1.2:
 // ✅ Funcionalidad de exportación CSV completa

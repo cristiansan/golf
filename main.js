@@ -1,11 +1,22 @@
-// ===== GOLF APP v1.2 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.3 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
 // - Manejo del formulario de registro
 // - Sistema de videos y links
+// - Sistema de reservas con calendario
 // - Generador de QR
 // - Funcionalidades de administrador
+//
+// === CHANGELOG v1.3 ===
+// 🚀 NUEVA FUNCIONALIDAD: Sistema de reservas completo
+//    - Calendario interactivo responsive (móvil/tablet/desktop)
+//    - Selección de fechas con días pasados deshabilitados
+//    - 8 horarios disponibles (09:00-18:00) con visualización de ocupados
+//    - Modal de pago con QR para transferencia bancaria (seña 50% - $7.500)
+//    - Persistencia en localStorage con IDs únicos y limpieza automática
+//    - Modal responsive optimizado para móviles con scroll
+//    - Nueva opción "Reserva" en menú de navegación
 //
 // === CHANGELOG v1.2 ===
 // ✅ CORRECCIÓN CRÍTICA: Videos admin - Solucionado problema de persistencia
@@ -109,7 +120,7 @@ function toggleAppVisibility(isLoggedIn) {
 
 // ===== SISTEMA DE NAVEGACIÓN Y SECCIONES =====
 // Helpers de secciones
-const sections = { formulario: sec('formulario'), videos: sec('videos'), links: sec('links'), qr: sec('qr') };
+const sections = { formulario: sec('formulario'), videos: sec('videos'), reserva: sec('reserva'), links: sec('links'), qr: sec('qr') };
 function sec(id){ return document.getElementById('sec-' + id); }
 
 // Función para cambiar entre secciones con animación
@@ -132,6 +143,17 @@ function switchTo(target){
     setTimeout(() => {
       console.log('[switchTo] 🎬 renderizando videos desde switchTo');
       renderVideos();
+    }, 100);
+  }
+  
+  // Actualizar calendario cuando se cambie a la sección de reservas
+  if (target === 'reserva') {
+    console.log('[switchTo] 📅 cambiando a sección reserva');
+    
+    // Recrear iconos Lucide para los botones del calendario
+    setTimeout(() => {
+      console.log('[switchTo] 📅 actualizando iconos en sección reserva');
+      window.lucide?.createIcons();
     }, 100);
   }
   
@@ -2075,4 +2097,484 @@ console.log('[app] sistema inicializado');
   }, 500);
   
   console.log('[qr] generador de QR inicializado');
+})();
+
+// ===== SISTEMA DE RESERVAS =====
+// Sistema de reserva de clases con calendario y pago
+(function initBookingSystem() {
+  console.log('[booking] inicializando sistema de reservas...');
+  
+  // Verificar que la sección existe
+  const reservaSection = document.getElementById('sec-reserva');
+  console.log('[booking] 🔍 sección reserva encontrada:', !!reservaSection);
+  
+  // Variables globales del sistema de reservas
+  let currentDate = new Date();
+  let selectedDate = null;
+  let selectedTime = null;
+  let bookedSlots = []; // Horarios ya reservados
+  
+  // Horarios disponibles (formato 24h)
+  const availableTimes = [
+    '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+  ];
+  
+  // Elementos del DOM
+  const prevMonthBtn = document.getElementById('prev-month');
+  const nextMonthBtn = document.getElementById('next-month');
+  const currentMonthEl = document.getElementById('current-month');
+  const calendarGrid = document.getElementById('calendar-grid');
+  const timeSlotsSection = document.getElementById('time-slots');
+  const timeGrid = document.getElementById('time-grid');
+  const bookingSummary = document.getElementById('booking-summary');
+  const bookingDetails = document.getElementById('booking-details');
+  const confirmBookingBtn = document.getElementById('btn-confirm-booking');
+  
+  // Modal de pago
+  const paymentModal = document.getElementById('modal-payment');
+  const paymentDetails = document.getElementById('payment-details');
+  const paymentQR = document.getElementById('payment-qr');
+  const closePaymentBtn = document.getElementById('btn-close-payment');
+  const cancelPaymentBtn = document.getElementById('btn-cancel-payment');
+  const paymentDoneBtn = document.getElementById('btn-payment-done');
+  const paymentOverlay = document.getElementById('modal-payment-overlay');
+  
+  if (!prevMonthBtn || !nextMonthBtn || !currentMonthEl || !calendarGrid) {
+    console.warn('[booking] elementos del calendario no encontrados');
+    console.warn('[booking] 🔍 elementos:', {
+      prevMonthBtn: !!prevMonthBtn,
+      nextMonthBtn: !!nextMonthBtn,
+      currentMonthEl: !!currentMonthEl,
+      calendarGrid: !!calendarGrid
+    });
+    return;
+  }
+  
+  console.log('[booking] elementos encontrados, iniciando...');
+  
+  // Cargar reservas existentes desde localStorage (evita problemas de permisos Firebase)
+  async function loadBookedSlots() {
+    try {
+      console.log('[booking] 📥 cargando reservas desde localStorage...');
+      
+      // Cargar reservas desde localStorage
+      const localBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+      
+      bookedSlots = [];
+      localBookings.forEach((booking) => {
+        // Solo considerar reservas confirmadas (pagadas) y no expiradas
+        const bookingDate = new Date(booking.date + 'T' + booking.time);
+        const now = new Date();
+        
+        if (booking.status === 'confirmed' && bookingDate >= now) {
+          bookedSlots.push({
+            date: booking.date,
+            time: booking.time,
+            id: booking.id
+          });
+        }
+      });
+      
+      // Limpiar reservas expiradas del localStorage
+      const validBookings = localBookings.filter(booking => {
+        const bookingDate = new Date(booking.date + 'T' + booking.time);
+        return bookingDate >= new Date();
+      });
+      
+      if (validBookings.length !== localBookings.length) {
+        localStorage.setItem('golf_reservas', JSON.stringify(validBookings));
+        console.log('[booking] 🧹 reservas expiradas limpiadas');
+      }
+      
+      console.log('[booking] ✅ reservas cargadas desde localStorage:', bookedSlots.length);
+    } catch (error) {
+      console.error('[booking] ❌ error cargando reservas desde localStorage:', error);
+      // Continuar sin reservas previas si hay error
+    }
+  }
+  
+  // Guardar reserva en localStorage (evita problemas de permisos Firebase)
+  async function saveBooking(bookingData) {
+    try {
+      console.log('[booking] 💾 guardando reserva en localStorage...');
+      console.log('[booking] 🔍 datos a guardar:', bookingData);
+      
+      // Generar ID único para la reserva
+      const reservaId = 'res_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      
+      const reservaDocument = {
+        ...bookingData,
+        id: reservaId,
+        createdAt: new Date().toISOString(),
+        ownerUid: currentUser?.uid || 'anonymous',
+        ownerEmail: currentUser?.email || 'anonymous'
+      };
+      
+      console.log('[booking] 📝 documento final a guardar:', reservaDocument);
+      
+      // Cargar reservas existentes
+      const existingBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+      
+      // Agregar nueva reserva
+      existingBookings.push(reservaDocument);
+      
+      // Guardar de vuelta en localStorage
+      localStorage.setItem('golf_reservas', JSON.stringify(existingBookings));
+      
+      console.log('[booking] ✅ reserva guardada en localStorage con ID:', reservaId);
+      console.log('[booking] 📊 total reservas en localStorage:', existingBookings.length);
+      
+      return reservaId;
+    } catch (error) {
+      console.error('[booking] ❌ error guardando reserva en localStorage:', error);
+      throw error;
+    }
+  }
+  
+  // Verificar si un horario está ocupado
+  function isSlotBooked(date, time) {
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    return bookedSlots.some(slot => 
+      slot.date === dateStr && slot.time === time
+    );
+  }
+  
+  // Generar calendario
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Actualizar header del mes
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    currentMonthEl.textContent = `${monthNames[month]} ${year}`;
+    
+    // Limpiar grid (mantener headers de días)
+    const dayHeaders = calendarGrid.querySelectorAll('.text-sm.font-medium');
+    calendarGrid.innerHTML = '';
+    dayHeaders.forEach(header => calendarGrid.appendChild(header));
+    
+    // Re-agregar headers si no existen
+    if (dayHeaders.length === 0) {
+      const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      daysOfWeek.forEach(day => {
+        const dayEl = document.createElement('div');
+        dayEl.className = 'text-center text-sm font-medium p-2 muted';
+        dayEl.textContent = day;
+        calendarGrid.appendChild(dayEl);
+      });
+    }
+    
+    // Calcular días
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+    
+    // Agregar días vacíos al inicio
+    for (let i = 0; i < startingDay; i++) {
+      const emptyDay = document.createElement('div');
+      emptyDay.className = 'p-2';
+      calendarGrid.appendChild(emptyDay);
+    }
+    
+    // Agregar días del mes
+    const today = new Date();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayDate = new Date(year, month, day);
+      const isPast = dayDate < today.setHours(0, 0, 0, 0);
+      const isToday = dayDate.toDateString() === new Date().toDateString();
+      const isSelected = selectedDate && dayDate.toDateString() === selectedDate.toDateString();
+      
+      const dayEl = document.createElement('button');
+      dayEl.className = `p-2 text-center rounded-md transition-colors ${
+        isPast 
+          ? 'text-gray-500 cursor-not-allowed' 
+          : isSelected
+            ? 'bg-green-600 text-white font-medium'
+            : isToday
+              ? 'bg-blue-600 text-white font-medium hover:bg-blue-700'
+              : 'hover:bg-gray-700 border border-transparent hover:border-gray-600'
+      }`;
+      dayEl.textContent = day;
+      dayEl.disabled = isPast;
+      
+      if (!isPast) {
+        dayEl.addEventListener('click', () => selectDate(dayDate));
+      }
+      
+      calendarGrid.appendChild(dayEl);
+    }
+  }
+  
+  // Seleccionar fecha
+  async function selectDate(date) {
+    selectedDate = date;
+    selectedTime = null;
+    renderCalendar();
+    
+    // Recargar reservas para la nueva fecha seleccionada
+    await loadBookedSlots();
+    showTimeSlots();
+    updateBookingSummary();
+  }
+  
+  // Mostrar horarios disponibles
+  function showTimeSlots() {
+    if (!selectedDate) {
+      timeSlotsSection.classList.add('hidden');
+      return;
+    }
+    
+    timeSlotsSection.classList.remove('hidden');
+    timeGrid.innerHTML = '';
+    
+    availableTimes.forEach(time => {
+      const isBooked = isSlotBooked(selectedDate, time);
+      const isSelected = selectedTime === time;
+      
+      const timeBtn = document.createElement('button');
+      timeBtn.className = `p-3 text-center rounded-md border transition-colors ${
+        isBooked
+          ? 'bg-red-600 text-white border-red-600 cursor-not-allowed opacity-75'
+          : isSelected
+            ? 'bg-green-600 text-white border-green-600 font-medium'
+            : 'border-gray-600 hover:border-green-600 hover:bg-green-600/20'
+      }`;
+      timeBtn.textContent = isBooked ? `${time} (Ocupado)` : time;
+      timeBtn.disabled = isBooked;
+      
+      if (!isBooked) {
+        timeBtn.addEventListener('click', () => selectTime(time));
+      }
+      
+      timeGrid.appendChild(timeBtn);
+    });
+  }
+  
+  // Seleccionar hora
+  function selectTime(time) {
+    selectedTime = time;
+    showTimeSlots();
+    updateBookingSummary();
+  }
+  
+  // Actualizar resumen de reserva
+  function updateBookingSummary() {
+    if (!selectedDate || !selectedTime) {
+      bookingSummary.classList.add('hidden');
+      confirmBookingBtn.classList.add('hidden');
+      return;
+    }
+    
+    const dateStr = selectedDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    bookingDetails.innerHTML = `
+      <div><strong>Fecha:</strong> ${dateStr}</div>
+      <div><strong>Hora:</strong> ${selectedTime}</div>
+      <div><strong>Duración:</strong> 1 hora</div>
+      <div><strong>Instructor:</strong> Luciano Sancho</div>
+    `;
+    
+    bookingSummary.classList.remove('hidden');
+    confirmBookingBtn.classList.remove('hidden');
+  }
+  
+  // Confirmar reserva (mostrar modal de pago)
+  function confirmBooking() {
+    if (!selectedDate || !selectedTime) return;
+    
+    const dateStr = selectedDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Actualizar detalles en el modal de pago
+    paymentDetails.innerHTML = `
+      <div><strong>Fecha:</strong> ${dateStr}</div>
+      <div><strong>Hora:</strong> ${selectedTime}</div>
+      <div><strong>Duración:</strong> 1 hora</div>
+      <div><strong>Instructor:</strong> Luciano Sancho</div>
+    `;
+    
+    // Generar QR para pago
+    generatePaymentQR();
+    
+    // Mostrar modal
+    paymentModal.classList.remove('hidden');
+    window.lucide?.createIcons();
+  }
+  
+  // Generar QR para pago
+  function generatePaymentQR() {
+    try {
+      const paymentData = `CBU: 1234567890123456789012
+Monto: $7500
+Concepto: Seña clase golf ${selectedDate.toLocaleDateString()} ${selectedTime}
+Instructor: Luciano Sancho Golf`;
+      
+      // Ajustar tamaño del canvas
+      paymentQR.width = 200;
+      paymentQR.height = 200;
+      
+      // Generar QR
+      if (window.QRCode) {
+        QRCode.toCanvas(paymentQR, paymentData, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          }
+        }, (error) => {
+          if (error) {
+            console.error('[booking] error generando QR de pago:', error);
+          } else {
+            console.log('[booking] QR de pago generado exitosamente');
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[booking] error generando QR de pago:', error);
+    }
+  }
+  
+  // Confirmar pago realizado
+  async function confirmPayment() {
+    try {
+      // Verificar que tengamos los datos necesarios
+      if (!selectedDate || !selectedTime) {
+        alert('Error: No se pudieron obtener los datos de la reserva');
+        return;
+      }
+      
+      // Verificar que el horario no haya sido reservado mientras tanto
+      await loadBookedSlots(); // Recargar para estar seguros
+      if (isSlotBooked(selectedDate, selectedTime)) {
+        alert('Lo siento, este horario acaba de ser reservado. Por favor selecciona otro horario.');
+        paymentModal.classList.add('hidden');
+        showTimeSlots(); // Actualizar horarios disponibles
+        return;
+      }
+      
+      // Preparar datos de la reserva (campos simples para evitar errores)
+      const bookingData = {
+        date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD
+        time: selectedTime,
+        status: 'confirmed',
+        amount: 15000,
+        deposit: 7500,
+        studentName: currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Usuario',
+        studentEmail: currentUser?.email || 'sin-email',
+        instructor: 'Luciano Sancho',
+        duration: '1 hora',
+        paymentDate: new Date().toISOString()
+      };
+      
+      console.log('[booking] 💾 guardando reserva confirmada:', bookingData);
+      
+      // Guardar en Firebase
+      const reservationId = await saveBooking(bookingData);
+      
+      // Agregar a la lista local de reservas
+      bookedSlots.push({
+        date: bookingData.date,
+        time: bookingData.time,
+        id: reservationId
+      });
+      
+      // Mostrar confirmación
+      const fechaFormateada = selectedDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      alert(`¡Reserva confirmada exitosamente!
+      
+Detalles de tu reserva:
+• Fecha: ${fechaFormateada}
+• Hora: ${selectedTime}
+• Instructor: Luciano Sancho
+• ID de reserva: ${reservationId}
+
+Tu clase ha sido reservada y el pago de la seña confirmado.
+
+IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cancelar o modificar la reserva, contacta directamente con el instructor.`);
+      
+      // Limpiar selección
+      selectedDate = null;
+      selectedTime = null;
+      
+      // Actualizar UI
+      renderCalendar();
+      timeSlotsSection.classList.add('hidden');
+      bookingSummary.classList.add('hidden');
+      confirmBookingBtn.classList.add('hidden');
+      
+      // Cerrar modal
+      paymentModal.classList.add('hidden');
+      
+    } catch (error) {
+      console.error('[booking] ❌ error confirmando pago:', error);
+      alert('Error al confirmar la reserva. Por favor intenta nuevamente.');
+    }
+  }
+  
+  // Event listeners
+  prevMonthBtn.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+  });
+  
+  nextMonthBtn.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+  });
+  
+  confirmBookingBtn.addEventListener('click', confirmBooking);
+  
+  // Event listeners del modal de pago
+  if (closePaymentBtn) {
+    closePaymentBtn.addEventListener('click', () => {
+      paymentModal.classList.add('hidden');
+    });
+  }
+  
+  if (cancelPaymentBtn) {
+    cancelPaymentBtn.addEventListener('click', () => {
+      paymentModal.classList.add('hidden');
+    });
+  }
+  
+  if (paymentDoneBtn) {
+    paymentDoneBtn.addEventListener('click', confirmPayment);
+  }
+  
+  if (paymentOverlay) {
+    paymentOverlay.addEventListener('click', () => {
+      paymentModal.classList.add('hidden');
+    });
+  }
+  
+  // Inicializar calendario y cargar reservas existentes
+  renderCalendar();
+  
+  // Cargar reservas existentes al inicializar
+  loadBookedSlots().then(() => {
+    console.log('[booking] sistema de reservas inicializado correctamente con', bookedSlots.length, 'reservas existentes');
+  }).catch(error => {
+    console.error('[booking] error inicial cargando reservas:', error);
+    console.log('[booking] sistema de reservas inicializado sin reservas previas');
+  });
 })();

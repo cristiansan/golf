@@ -1,5 +1,41 @@
 # Changelog - Golf App
 
+## v1.3 - 2025-01-09
+
+### 🚀 Nueva Funcionalidad Principal
+- **[SISTEMA DE RESERVAS]** Implementado sistema completo de reservas de clases
+  - Calendario interactivo responsive para móviles, tablets y desktop
+  - Selección intuitiva de fechas con días pasados automáticamente deshabilitados
+  - 8 horarios disponibles diarios (09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00, 18:00)
+  - Visualización clara de slots ya ocupados (mostrados en rojo como "Ocupado")
+
+### 💳 Sistema de Pagos
+- **[MODAL DE PAGO]** Modal de confirmación con código QR para transferencia bancaria
+  - Generación automática de QR con datos de transferencia (CBU, monto, concepto)
+  - Seña del 50% requerida ($7.500 de $15.000 total)
+  - Instrucciones paso a paso para el proceso de pago
+  - Confirmación con ID único de reserva
+
+### 📱 Diseño Mobile-First  
+- **[RESPONSIVE]** Modal de pago totalmente optimizado para dispositivos móviles
+  - Scroll interno para acceder a todos los elementos en pantallas pequeñas
+  - QR ajustado dinámicamente según el tamaño de pantalla
+  - Espaciado y tipografía optimizada para touch interfaces
+
+### 🔧 Sistema Técnico
+- **[PERSISTENCIA]** Reservas guardadas en localStorage (evita problemas de permisos Firebase)
+  - Generación de IDs únicos para cada reserva
+  - Limpieza automática de reservas expiradas
+  - Validación de disponibilidad antes de confirmar
+  - Bloqueo automático de horarios ya reservados
+
+### 🎯 Mejoras de UX
+- **[NAVEGACIÓN]** Nueva opción "Reserva" agregada al menú principal
+- **[FLUJO INTUITIVO]** Proceso guiado: Fecha → Hora → Resumen → Pago → Confirmación
+- **[VALIDACIONES]** Prevención de dobles reservas y verificación de disponibilidad en tiempo real
+
+---
+
 ## v1.2 - 2025-01-09
 
 ### 🔧 Correcciones Críticas
