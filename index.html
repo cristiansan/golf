@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Golf App v1.3 — Formulario, Links y QR</title>
+    <title>Golf App v1.4 — Formulario, Links y QR</title>
     
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +81,7 @@
           <div id="nav-admin-header" class="px-3 pt-3 text-xs muted" style="display:none;">Admin</div>
           <div id="nav-admin" class="space-y-1" style="display:none;">
             <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="links">Agregar Links</button>
+            <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="reservas">Reservas</button>
           </div>
         </nav>
         
@@ -93,7 +94,7 @@
             <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
               <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
             </button>
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.3</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.4</button>
           </div>
         </div>
       </div>
@@ -349,8 +350,8 @@
           <div class="font-medium mb-2">Resumen de reserva:</div>
           <div id="booking-details" class="text-sm space-y-1 muted"></div>
           <div class="flex items-center justify-between pt-2 mt-2 border-t" style="border-color: var(--border);">
-            <span class="font-medium">Total: $15.000</span>
-            <span class="text-sm muted">Seña requerida: $7.500 (50%)</span>
+            <span class="font-medium">Total: $40.000</span>
+            <span class="text-sm muted">Seña requerida: $20.000 (50%)</span>
           </div>
         </div>
         
@@ -382,6 +383,28 @@
               <button id="btn-share-qr" class="px-3 py-2 rounded-md btn-primary btn">Compartir</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- ===== SECCIÓN: GESTIÓN DE RESERVAS (solo admin) ===== -->
+      <!-- Panel para administradores para ver y gestionar reservas -->
+      <section id="sec-reservas" class="card-surface hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold">Gestión de Reservas</h2>
+          <button id="btn-refresh-reservas" class="px-3 py-2 rounded-md border btn text-sm" style="border-color: var(--border);">
+            <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i>Actualizar
+          </button>
+        </div>
+        
+        <!-- Lista de reservas -->
+        <div id="reservas-list" class="space-y-3">
+          <!-- Las reservas se cargarán dinámicamente aquí -->
+        </div>
+        
+        <!-- Mensaje cuando no hay reservas -->
+        <div id="no-reservas-message" class="text-center py-8 muted hidden">
+          <i data-lucide="calendar-x" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+          <p>No hay reservas confirmadas</p>
         </div>
       </section>
     </main>
@@ -445,11 +468,24 @@
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-lg">Changelog - v1.3</h3>
+          <h3 class="font-semibold text-lg">Changelog - v1.4</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         
         <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <div class="font-medium mb-1 text-purple-400">v1.4 🔧</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>GESTIÓN DE RESERVAS ADMIN:</strong> Nueva sección "Reservas" en menú administrativo para gestionar todas las reservas confirmadas.</li>
+              <li><strong>PANEL ADMINISTRATIVO:</strong> Vista completa de reservas con información detallada del alumno (nombre, email, teléfono) y datos de la clase.</li>
+              <li><strong>INFORMACIÓN DETALLADA:</strong> Muestra fecha, hora, instructor, estado de la reserva y metadatos (ID, fecha de creación, estado de pago).</li>
+              <li><strong>ESTADO DE RESERVAS:</strong> Indicadores visuales que distinguen entre reservas activas y pasadas con colores distintivos.</li>
+              <li><strong>CANCELACIÓN DE RESERVAS:</strong> Funcionalidad para eliminar reservas con diálogo de confirmación y actualización automática.</li>
+              <li><strong>ACTUALIZACIÓN EN TIEMPO REAL:</strong> Botón de refresh manual y carga automática al acceder a la sección.</li>
+              <li><strong>CORRECCIÓN QR PAGO:</strong> CVU corregido en QR de pago de placeholder genérico a datos bancarios reales (CVU: 0000003100041354955291).</li>
+              <li>Interfaz consistente con el resto de la aplicación usando iconos Lucide y diseño responsive.</li>
+            </ul>
+          </div>
           <div class="border-b pb-3" style="border-color: var(--border)">
             <div class="font-medium mb-1 text-blue-400">v1.3 🚀</div>
             <ul class="list-disc pl-5 space-y-1">
@@ -494,7 +530,7 @@
         </div>
         
         <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
-          <p class="text-sm text-gray-400">Golf App v1.3 - Luciano Sancho Golf</p>
+          <p class="text-sm text-gray-400">Golf App v1.4 - Luciano Sancho Golf</p>
         </div>
       </div>
     </div>
@@ -665,7 +701,7 @@
       </div>
     </div>
 
-    <!-- ===== MODAL: PAGO DE RESERVA ===== -->
+    <!-- ===== MODAL: PAGO DE RESERVA actualizado===== -->
     <!-- Modal para confirmar pago de seña con QR -->
     <div id="modal-payment" class="fixed inset-0 z-50 hidden overflow-y-auto">
       <div id="modal-payment-overlay" class="absolute inset-0 bg-black/70"></div>
@@ -683,15 +719,18 @@
           <div id="payment-details" class="text-sm space-y-1 muted"></div>
           <div class="flex items-center justify-between pt-2 mt-2 border-t font-medium" style="border-color: var(--border);">
             <span>Seña requerida:</span>
-            <span class="text-green-400">$7.500 (50%)</span>
+            <span class="text-green-400">$20.000 (50%)</span>
           </div>
         </div>
         
         <!-- QR de pago -->
-        <div class="text-center mb-4">
+        <div class="text-left mb-4">
           <div class="mb-3">
             <div class="font-medium mb-1">Escanea el QR para pagar la seña:</div>
-            <div class="text-sm muted">Transferencia bancaria - CBU: 1234567890123456789012</div>
+            <div class="text-sm muted"><b>CVU:</b> 0000003100041354955291</div>
+            <div class="text-sm muted"><b>Alias:</b> lucianosancho22</div>
+            <div class="text-sm muted"><b>Nombre:</b> Luciano Joaquin Sancho</div>
+
           </div>
           <canvas id="payment-qr" class="mx-auto border-2 rounded-lg" style="border-color: var(--border); background: white; width: 200px; height: 200px;"></canvas>
         </div>
@@ -700,8 +739,8 @@
         <div class="text-sm muted mb-4 p-3 rounded-md border" style="border-color: var(--border); background: #0b1220;">
           <div class="font-medium text-white mb-2">Instrucciones:</div>
           <ol class="list-decimal pl-4 space-y-1">
-            <li>Escanea el código QR con tu app bancaria</li>
-            <li>Transfiere $7.500 (50% del total)</li>
+            <li>Escanea el código QR con tu app preferida</li>
+            <li>Transfiere $20.000 (50% del total)</li>
             <li>Guarda el comprobante de pago</li>
             <li>Tu reserva quedará confirmada</li>
           </ol>
@@ -720,7 +759,7 @@
     </div>
 
     <!-- Script principal de la aplicación -->
-    <script type="module" src="./main.js?v=25"></script>
+    <script type="module" src="./main.js?v=26"></script>
   </body>
 </html>
 

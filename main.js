@@ -1,4 +1,4 @@
-// ===== GOLF APP v1.3 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.4 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
@@ -120,7 +120,7 @@ function toggleAppVisibility(isLoggedIn) {
 
 // ===== SISTEMA DE NAVEGACIÓN Y SECCIONES =====
 // Helpers de secciones
-const sections = { formulario: sec('formulario'), videos: sec('videos'), reserva: sec('reserva'), links: sec('links'), qr: sec('qr') };
+const sections = { formulario: sec('formulario'), videos: sec('videos'), reserva: sec('reserva'), links: sec('links'), qr: sec('qr'), reservas: sec('reservas') };
 function sec(id){ return document.getElementById('sec-' + id); }
 
 // Función para cambiar entre secciones con animación
@@ -2417,8 +2417,10 @@ console.log('[app] sistema inicializado');
   // Generar QR para pago
   function generatePaymentQR() {
     try {
-      const paymentData = `CBU: 1234567890123456789012
-Monto: $7500
+      const paymentData = `CVU: 0000003100041354955291
+Alias: lucianosancho22
+Nombre: Luciano Joaquin Sancho
+Monto: $20000
 Concepto: Seña clase golf ${selectedDate.toLocaleDateString()} ${selectedTime}
 Instructor: Luciano Sancho Golf`;
       
@@ -2577,4 +2579,179 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     console.error('[booking] error inicial cargando reservas:', error);
     console.log('[booking] sistema de reservas inicializado sin reservas previas');
   });
+})();
+
+// ===== SISTEMA DE GESTIÓN DE RESERVAS (ADMIN) =====
+// Panel administrativo para ver y gestionar reservas
+(function initReservasManagement() {
+  console.log('[reservas] inicializando sistema de gestión de reservas...');
+  
+  const reservasList = document.getElementById('reservas-list');
+  const noReservasMessage = document.getElementById('no-reservas-message');
+  const refreshBtn = document.getElementById('btn-refresh-reservas');
+  
+  if (!reservasList || !noReservasMessage) {
+    console.warn('[reservas] elementos no encontrados');
+    return;
+  }
+  
+  // Función para cargar y mostrar todas las reservas
+  async function loadReservas() {
+    try {
+      console.log('[reservas] cargando reservas desde localStorage...');
+      
+      // Obtener reservas desde localStorage
+      const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+      console.log('[reservas] reservas encontradas:', reservas.length);
+      
+      // Limpiar lista actual
+      reservasList.innerHTML = '';
+      
+      if (reservas.length === 0) {
+        noReservasMessage.classList.remove('hidden');
+        return;
+      } else {
+        noReservasMessage.classList.add('hidden');
+      }
+      
+      // Ordenar reservas por fecha y hora
+      const reservasOrdenadas = reservas.sort((a, b) => {
+        const dateA = new Date(a.date + 'T' + a.time);
+        const dateB = new Date(b.date + 'T' + b.time);
+        return dateA - dateB;
+      });
+      
+      // Crear elementos para cada reserva
+      reservasOrdenadas.forEach(reserva => {
+        const reservaElement = createReservaElement(reserva);
+        reservasList.appendChild(reservaElement);
+      });
+      
+      // Actualizar iconos de Lucide
+      window.lucide?.createIcons();
+      
+    } catch (error) {
+      console.error('[reservas] error cargando reservas:', error);
+      alert('Error al cargar las reservas');
+    }
+  }
+  
+  // Función para crear elemento HTML de una reserva
+  function createReservaElement(reserva) {
+    const div = document.createElement('div');
+    div.className = 'p-4 border rounded-lg';
+    div.style.borderColor = 'var(--border)';
+    div.style.background = 'var(--card)';
+    
+    // Formatear fecha
+    const fechaReserva = new Date(reserva.date + 'T' + reserva.time);
+    const fechaFormateada = fechaReserva.toLocaleDateString('es-AR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Determinar si la reserva es pasada
+    const esPasada = fechaReserva < new Date();
+    const estadoClass = esPasada ? 'text-red-400' : 'text-green-400';
+    const estadoText = esPasada ? 'Pasada' : 'Activa';
+    
+    div.innerHTML = `
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="font-medium">${reserva.studentName || 'Sin nombre'}</h3>
+            <span class="px-2 py-1 rounded text-xs ${estadoClass} border" style="border-color: currentColor;">
+              ${estadoText}
+            </span>
+          </div>
+          <div class="text-sm muted space-y-1">
+            <div><i data-lucide="calendar" class="w-4 h-4 inline mr-2"></i>${fechaFormateada}</div>
+            <div><i data-lucide="clock" class="w-4 h-4 inline mr-2"></i>${reserva.time}</div>
+            <div><i data-lucide="user" class="w-4 h-4 inline mr-2"></i>Instructor: Luciano Sancho</div>
+            ${reserva.studentEmail ? `<div><i data-lucide="mail" class="w-4 h-4 inline mr-2"></i>${reserva.studentEmail}</div>` : ''}
+            ${reserva.studentPhone ? `<div><i data-lucide="phone" class="w-4 h-4 inline mr-2"></i>${reserva.studentPhone}</div>` : ''}
+          </div>
+        </div>
+        <button 
+          class="px-3 py-2 rounded-md border btn text-sm text-red-400 hover:bg-red-500/10" 
+          style="border-color: var(--border);"
+          onclick="deleteReserva('${reserva.id}')"
+          title="Eliminar reserva"
+        >
+          <i data-lucide="trash-2" class="w-4 h-4 inline mr-1"></i>Eliminar
+        </button>
+      </div>
+      
+      <div class="pt-3 border-t text-xs muted" style="border-color: var(--border);">
+        <div class="flex justify-between">
+          <span>ID: ${reserva.id}</span>
+          <span>Creada: ${new Date(reserva.createdAt).toLocaleDateString('es-AR')}</span>
+        </div>
+        <div class="mt-1">
+          <span>Estado de pago: </span>
+          <span class="text-green-400">${reserva.paymentStatus || 'Confirmado'}</span>
+        </div>
+      </div>
+    `;
+    
+    return div;
+  }
+  
+  // Función para eliminar reserva
+  window.deleteReserva = async function(reservaId) {
+    try {
+      console.log('[reservas] solicitando eliminación de reserva:', reservaId);
+      
+      // Confirmar eliminación
+      if (!confirm('¿Estás seguro de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) {
+        return;
+      }
+      
+      // Cargar reservas actuales
+      const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+      
+      // Filtrar la reserva a eliminar
+      const reservasFiltradas = reservas.filter(reserva => reserva.id !== reservaId);
+      
+      if (reservasFiltradas.length === reservas.length) {
+        alert('No se encontró la reserva a eliminar');
+        return;
+      }
+      
+      // Guardar reservas actualizadas
+      localStorage.setItem('golf_reservas', JSON.stringify(reservasFiltradas));
+      
+      console.log('[reservas] reserva eliminada exitosamente:', reservaId);
+      
+      // Recargar lista
+      await loadReservas();
+      
+      alert('Reserva eliminada exitosamente');
+      
+    } catch (error) {
+      console.error('[reservas] error eliminando reserva:', error);
+      alert('Error al eliminar la reserva');
+    }
+  };
+  
+  // Event listener para botón de actualizar
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadReservas);
+  }
+  
+  // Función pública para recargar reservas cuando sea necesario
+  window.refreshReservas = loadReservas;
+  
+  // Cargar reservas iniciales cuando se accede a la sección
+  const originalSwitchTo = window.switchTo;
+  window.switchTo = function(target) {
+    originalSwitchTo(target);
+    if (target === 'reservas') {
+      loadReservas();
+    }
+  };
+  
+  console.log('[reservas] sistema de gestión de reservas inicializado');
 })();
