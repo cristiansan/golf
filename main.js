@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, getDocs, query, orderBy, updateDoc, setDoc, where, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, getDocs, query, orderBy, updateDoc, setDoc, where, arrayUnion, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -2151,83 +2151,198 @@ console.log('[app] sistema inicializado');
   }
   
   console.log('[booking] elementos encontrados, iniciando...');
-  
-  // Cargar reservas existentes desde localStorage (evita problemas de permisos Firebase)
+
+  // Función para migrar reservas de localStorage a Firestore (solo se ejecuta una vez)
+  async function migrateLocalReservationsToFirestore() {
+    try {
+      // Verificar si ya se migró anteriormente
+      const migrationKey = 'golf_reservas_migrated_to_firestore';
+      if (localStorage.getItem(migrationKey) === 'true') {
+        console.log('[migration] ✅ migración ya realizada anteriormente');
+        return;
+      }
+
+      console.log('[migration] 🔄 iniciando migración de localStorage a Firestore...');
+
+      const localBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+
+      if (localBookings.length === 0) {
+        console.log('[migration] ✅ no hay reservas locales para migrar');
+        localStorage.setItem(migrationKey, 'true');
+        return;
+      }
+
+      console.log('[migration] 📦 migrando', localBookings.length, 'reservas a Firestore...');
+
+      let migratedCount = 0;
+      const batch = [];
+
+      for (const booking of localBookings) {
+        try {
+          // Verificar si la reserva ya existe en Firestore (por fecha, hora y email)
+          const existingQuery = query(
+            collection(db, 'reservas'),
+            where('date', '==', booking.date),
+            where('time', '==', booking.time),
+            where('studentEmail', '==', booking.studentEmail || '')
+          );
+          const existingSnapshot = await getDocs(existingQuery);
+
+          if (existingSnapshot.empty) {
+            // La reserva no existe, migrarla
+            const reservaDocument = {
+              ...booking,
+              createdAt: serverTimestamp(),
+              migratedFromLocal: true
+            };
+
+            // Remover el ID local antes de guardar en Firestore
+            delete reservaDocument.id;
+
+            const docRef = await addDoc(collection(db, 'reservas'), reservaDocument);
+            migratedCount++;
+            console.log('[migration] ✅ reserva migrada:', docRef.id);
+          } else {
+            console.log('[migration] ⏭️ reserva ya existe, omitiendo:', booking.date, booking.time);
+          }
+        } catch (bookingError) {
+          console.error('[migration] ❌ error migrando reserva individual:', bookingError);
+        }
+      }
+
+      // Marcar migración como completa
+      localStorage.setItem(migrationKey, 'true');
+      console.log('[migration] ✅ migración completada:', migratedCount, 'de', localBookings.length, 'reservas migradas');
+
+    } catch (error) {
+      console.error('[migration] ❌ error durante migración:', error);
+      // No marcar como completada si falló
+    }
+  }
+
+  // Cargar reservas existentes desde Firestore (sincronización en tiempo real)
   async function loadBookedSlots() {
     try {
-      console.log('[booking] 📥 cargando reservas desde localStorage...');
-      
-      // Cargar reservas desde localStorage
-      const localBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
-      
+      console.log('[booking] 📥 cargando reservas desde Firestore...');
+
+      // Migrar reservas existentes de localStorage a Firestore (solo una vez)
+      await migrateLocalReservationsToFirestore();
+
+      // Cargar reservas desde Firestore
+      const reservasQuery = query(
+        collection(db, 'reservas'),
+        where('status', '==', 'confirmed')
+      );
+      const querySnapshot = await getDocs(reservasQuery);
+
       bookedSlots = [];
-      localBookings.forEach((booking) => {
-        // Solo considerar reservas confirmadas (pagadas) y no expiradas
+      const now = new Date();
+
+      querySnapshot.forEach((doc) => {
+        const booking = doc.data();
         const bookingDate = new Date(booking.date + 'T' + booking.time);
-        const now = new Date();
-        
-        if (booking.status === 'confirmed' && bookingDate >= now) {
+
+        // Solo considerar reservas confirmadas (pagadas) y no expiradas
+        if (bookingDate >= now) {
           bookedSlots.push({
             date: booking.date,
             time: booking.time,
-            id: booking.id
+            id: doc.id
           });
         }
       });
-      
-      // Limpiar reservas expiradas del localStorage
-      const validBookings = localBookings.filter(booking => {
-        const bookingDate = new Date(booking.date + 'T' + booking.time);
-        return bookingDate >= new Date();
-      });
-      
-      if (validBookings.length !== localBookings.length) {
-        localStorage.setItem('golf_reservas', JSON.stringify(validBookings));
-        console.log('[booking] 🧹 reservas expiradas limpiadas');
-      }
-      
-      console.log('[booking] ✅ reservas cargadas desde localStorage:', bookedSlots.length);
+
+      console.log('[booking] ✅ reservas cargadas desde Firestore:', bookedSlots.length);
     } catch (error) {
-      console.error('[booking] ❌ error cargando reservas desde localStorage:', error);
-      // Continuar sin reservas previas si hay error
+      console.error('[booking] ❌ error cargando reservas desde Firestore:', error);
+      console.log('[booking] 🔄 intentando cargar desde localStorage como respaldo...');
+
+      // Respaldo: cargar desde localStorage si Firestore falla
+      try {
+        const localBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        bookedSlots = [];
+        const now = new Date();
+
+        localBookings.forEach((booking) => {
+          const bookingDate = new Date(booking.date + 'T' + booking.time);
+          if (booking.status === 'confirmed' && bookingDate >= now) {
+            bookedSlots.push({
+              date: booking.date,
+              time: booking.time,
+              id: booking.id
+            });
+          }
+        });
+
+        console.log('[booking] ✅ reservas cargadas desde localStorage (respaldo):', bookedSlots.length);
+      } catch (localError) {
+        console.error('[booking] ❌ error también en localStorage:', localError);
+      }
     }
   }
   
-  // Guardar reserva en localStorage (evita problemas de permisos Firebase)
+  // Guardar reserva en Firestore (sincronización automática)
   async function saveBooking(bookingData) {
     try {
-      console.log('[booking] 💾 guardando reserva en localStorage...');
+      console.log('[booking] 💾 guardando reserva en Firestore...');
       console.log('[booking] 🔍 datos a guardar:', bookingData);
-      
-      // Generar ID único para la reserva
-      const reservaId = 'res_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      
+
       const reservaDocument = {
         ...bookingData,
-        id: reservaId,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
         ownerUid: currentUser?.uid || 'anonymous',
         ownerEmail: currentUser?.email || 'anonymous'
       };
-      
+
       console.log('[booking] 📝 documento final a guardar:', reservaDocument);
-      
-      // Cargar reservas existentes
-      const existingBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
-      
-      // Agregar nueva reserva
-      existingBookings.push(reservaDocument);
-      
-      // Guardar de vuelta en localStorage
-      localStorage.setItem('golf_reservas', JSON.stringify(existingBookings));
-      
-      console.log('[booking] ✅ reserva guardada en localStorage con ID:', reservaId);
-      console.log('[booking] 📊 total reservas en localStorage:', existingBookings.length);
-      
+
+      // Guardar en Firestore
+      const docRef = await addDoc(collection(db, 'reservas'), reservaDocument);
+      const reservaId = docRef.id;
+
+      console.log('[booking] ✅ reserva guardada en Firestore con ID:', reservaId);
+
+      // También guardar en localStorage como respaldo
+      try {
+        const existingBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        const localReserva = {
+          ...reservaDocument,
+          id: reservaId,
+          createdAt: new Date().toISOString()
+        };
+        existingBookings.push(localReserva);
+        localStorage.setItem('golf_reservas', JSON.stringify(existingBookings));
+        console.log('[booking] 📦 reserva también guardada en localStorage como respaldo');
+      } catch (localError) {
+        console.warn('[booking] ⚠️ no se pudo guardar respaldo local:', localError);
+      }
+
       return reservaId;
     } catch (error) {
-      console.error('[booking] ❌ error guardando reserva en localStorage:', error);
-      throw error;
+      console.error('[booking] ❌ error guardando reserva en Firestore:', error);
+      console.log('[booking] 🔄 intentando guardar solo en localStorage...');
+
+      // Respaldo: guardar solo en localStorage si Firestore falla
+      try {
+        const reservaId = 'res_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const reservaDocument = {
+          ...bookingData,
+          id: reservaId,
+          createdAt: new Date().toISOString(),
+          ownerUid: currentUser?.uid || 'anonymous',
+          ownerEmail: currentUser?.email || 'anonymous'
+        };
+
+        const existingBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        existingBookings.push(reservaDocument);
+        localStorage.setItem('golf_reservas', JSON.stringify(existingBookings));
+
+        console.log('[booking] ✅ reserva guardada en localStorage (respaldo) con ID:', reservaId);
+        return reservaId;
+      } catch (localError) {
+        console.error('[booking] ❌ error también en localStorage:', localError);
+        throw error;
+      }
     }
   }
   
@@ -2595,44 +2710,96 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     return;
   }
   
-  // Función para cargar y mostrar todas las reservas
+  // Función para cargar y mostrar todas las reservas desde Firestore
   async function loadReservas() {
     try {
-      console.log('[reservas] cargando reservas desde localStorage...');
-      
-      // Obtener reservas desde localStorage
-      const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
-      console.log('[reservas] reservas encontradas:', reservas.length);
-      
+      console.log('[reservas] cargando reservas desde Firestore...');
+
+      // Migrar reservas existentes de localStorage a Firestore (solo una vez)
+      await migrateLocalReservationsToFirestore();
+
+      // Obtener todas las reservas desde Firestore
+      const reservasQuery = query(
+        collection(db, 'reservas'),
+        orderBy('date', 'desc'),
+        orderBy('time', 'desc')
+      );
+      const querySnapshot = await getDocs(reservasQuery);
+
+      const reservas = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        reservas.push({
+          ...data,
+          id: doc.id,
+          // Convertir timestamp de Firestore a string para compatibilidad
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt
+        });
+      });
+
+      console.log('[reservas] reservas encontradas en Firestore:', reservas.length);
+
       // Limpiar lista actual
       reservasList.innerHTML = '';
-      
+
       if (reservas.length === 0) {
         noReservasMessage.classList.remove('hidden');
         return;
       } else {
         noReservasMessage.classList.add('hidden');
       }
-      
-      // Ordenar reservas por fecha y hora
+
+      // Ordenar reservas por fecha y hora (más recientes primero)
       const reservasOrdenadas = reservas.sort((a, b) => {
         const dateA = new Date(a.date + 'T' + a.time);
         const dateB = new Date(b.date + 'T' + b.time);
-        return dateA - dateB;
+        return dateB - dateA; // Orden descendente (más recientes primero)
       });
-      
+
       // Crear elementos para cada reserva
       reservasOrdenadas.forEach(reserva => {
         const reservaElement = createReservaElement(reserva);
         reservasList.appendChild(reservaElement);
       });
-      
+
       // Actualizar iconos de Lucide
       window.lucide?.createIcons();
       
     } catch (error) {
-      console.error('[reservas] error cargando reservas:', error);
-      alert('Error al cargar las reservas');
+      console.error('[reservas] error cargando reservas desde Firestore:', error);
+      console.log('[reservas] 🔄 intentando cargar desde localStorage como respaldo...');
+
+      // Respaldo: cargar desde localStorage si Firestore falla
+      try {
+        const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        console.log('[reservas] reservas encontradas en localStorage (respaldo):', reservas.length);
+
+        reservasList.innerHTML = '';
+
+        if (reservas.length === 0) {
+          noReservasMessage.classList.remove('hidden');
+          return;
+        } else {
+          noReservasMessage.classList.add('hidden');
+        }
+
+        const reservasOrdenadas = reservas.sort((a, b) => {
+          const dateA = new Date(a.date + 'T' + a.time);
+          const dateB = new Date(b.date + 'T' + b.time);
+          return dateB - dateA;
+        });
+
+        reservasOrdenadas.forEach(reserva => {
+          const reservaElement = createReservaElement(reserva);
+          reservasList.appendChild(reservaElement);
+        });
+
+        window.lucide?.createIcons();
+        console.log('[reservas] ✅ reservas cargadas desde localStorage (respaldo)');
+      } catch (localError) {
+        console.error('[reservas] ❌ error también en localStorage:', localError);
+        alert('Error al cargar las reservas desde Firestore y localStorage');
+      }
     }
   }
   
@@ -2699,32 +2866,41 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     return div;
   }
   
-  // Función para eliminar reserva
+  // Función para eliminar reserva desde Firestore
   window.deleteReserva = async function(reservaId) {
     try {
       console.log('[reservas] solicitando eliminación de reserva:', reservaId);
-      
+
       // Confirmar eliminación
       if (!confirm('¿Estás seguro de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) {
         return;
       }
-      
-      // Cargar reservas actuales
-      const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
-      
-      // Filtrar la reserva a eliminar
-      const reservasFiltradas = reservas.filter(reserva => reserva.id !== reservaId);
-      
-      if (reservasFiltradas.length === reservas.length) {
-        alert('No se encontró la reserva a eliminar');
-        return;
+
+      try {
+        // Eliminar de Firestore
+        const reservaRef = doc(db, 'reservas', reservaId);
+        await deleteDoc(reservaRef);
+        console.log('[reservas] reserva eliminada de Firestore:', reservaId);
+      } catch (firestoreError) {
+        console.error('[reservas] error eliminando de Firestore:', firestoreError);
+        console.log('[reservas] intentando eliminar solo de localStorage...');
       }
-      
-      // Guardar reservas actualizadas
-      localStorage.setItem('golf_reservas', JSON.stringify(reservasFiltradas));
-      
+
+      // También eliminar de localStorage (para mantener sincronización)
+      try {
+        const reservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        const reservasFiltradas = reservas.filter(reserva => reserva.id !== reservaId);
+
+        if (reservasFiltradas.length !== reservas.length) {
+          localStorage.setItem('golf_reservas', JSON.stringify(reservasFiltradas));
+          console.log('[reservas] reserva también eliminada de localStorage');
+        }
+      } catch (localError) {
+        console.warn('[reservas] error eliminando de localStorage:', localError);
+      }
+
       console.log('[reservas] reserva eliminada exitosamente:', reservaId);
-      
+
       // Recargar lista
       await loadReservas();
       
