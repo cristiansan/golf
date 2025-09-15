@@ -1,4 +1,4 @@
-// ===== GOLF APP v1.4 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.5 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
@@ -8,7 +8,17 @@
 // - Generador de QR
 // - Funcionalidades de administrador
 //
-// === CHANGELOG v1.3 ===
+// === CHANGELOG v1.5 ===
+// ✅ CORRECCIÓN CRÍTICA: Sincronización de reservas entre administradores
+//    - Migración completa de localStorage a Firestore para reservas
+//    - Sincronización automática en tiempo real entre todos los administradores
+//    - Eliminación del problema de "no ver las mismas reservas"
+//    - Ya no es necesario tocar el botón "actualizar" para ver nuevas reservas
+//    - Migración automática de reservas existentes de localStorage a Firestore
+//    - Sistema de respaldo híbrido (Firestore + localStorage) para mayor confiabilidad
+//    - Eliminación sincronizada desde panel administrativo
+//
+// === CHANGELOG v1.4 ===
 // 🚀 NUEVA FUNCIONALIDAD: Sistema de reservas completo
 //    - Calendario interactivo responsive (móvil/tablet/desktop)
 //    - Selección de fechas con días pasados deshabilitados
@@ -18,7 +28,7 @@
 //    - Modal responsive optimizado para móviles con scroll
 //    - Nueva opción "Reserva" en menú de navegación
 //
-// === CHANGELOG v1.2 ===
+// === CHANGELOG v1.3 ===
 // ✅ CORRECCIÓN CRÍTICA: Videos admin - Solucionado problema de persistencia
 //    - Videos aparecían y desaparecían después de refrescar página
 //    - Eliminación mejorada con sincronización forzada desde Firebase

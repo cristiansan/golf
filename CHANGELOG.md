@@ -1,5 +1,29 @@
 # Changelog - Golf App
 
+## v1.5 - 2025-09-15
+
+### ✅ Corrección Crítica
+- **[SINCRONIZACIÓN DE RESERVAS]** Migración completa de localStorage a Firestore para el sistema de reservas
+  - Sincronización automática en tiempo real entre todos los administradores
+  - Eliminación del problema donde diferentes administradores no veían las mismas reservas
+  - Ya no es necesario tocar el botón "actualizar" para ver nuevas reservas
+  - Migración automática de reservas existentes de localStorage a Firestore sin pérdida de datos
+  - Sistema de respaldo híbrido (Firestore como principal, localStorage como respaldo)
+  - Eliminación sincronizada desde panel administrativo entre todos los dispositivos
+  - Mejora significativa en la confiabilidad y consistencia del sistema de reservas
+
+## v1.4 - 2025-01-09
+
+### 🔧 Gestión Administrativa
+- **[GESTIÓN DE RESERVAS ADMIN]** Nueva sección "Reservas" en menú administrativo para gestionar todas las reservas confirmadas
+  - Panel administrativo con vista completa de reservas y información detallada del alumno (nombre, email, teléfono)
+  - Información detallada: fecha, hora, instructor, estado de la reserva y metadatos (ID, fecha de creación, estado de pago)
+  - Indicadores visuales que distinguen entre reservas activas y pasadas con colores distintivos
+  - Funcionalidad para eliminar reservas con diálogo de confirmación y actualización automática
+  - Botón de refresh manual y carga automática al acceder a la sección
+  - Corrección del CVU en QR de pago (CVU: 0000003100041354955291)
+  - Interfaz consistente con el resto de la aplicación usando iconos Lucide y diseño responsive
+
 ## v1.3 - 2025-01-09
 
 ### 🚀 Nueva Funcionalidad Principal
@@ -36,7 +60,7 @@
 
 ---
 
-## v1.2 - 2025-01-09
+## v1.2 - 2025-01-08
 
 ### 🔧 Correcciones Críticas
 - **[VIDEOS ADMIN]** Solucionado problema de persistencia de videos para administradores
