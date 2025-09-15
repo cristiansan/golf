@@ -1,4 +1,4 @@
-// ===== GOLF APP v1.6 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.6.1 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
