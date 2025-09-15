@@ -110,7 +110,7 @@ setPersistence(auth, browserLocalPersistence);
 
 // ===== FUNCIÓN GLOBAL DE MIGRACIÓN DE RESERVAS =====
 // Función para migrar reservas de localStorage a Firestore (solo se ejecuta una vez)
-async function migrateLocalReservationsToFirestore() {
+window.migrateLocalReservationsToFirestore = async function migrateLocalReservationsToFirestore() {
   try {
     // Verificar si ya se migró anteriormente
     const migrationKey = 'golf_reservas_migrated_to_firestore';
@@ -194,14 +194,20 @@ async function migrateLocalReservationsToFirestore() {
     console.error('[migration] ❌ error durante migración:', error);
     // No marcar como completada si falló
   }
-}
+};
 
 // Función global para forzar re-migración (debugging)
 window.forceMigration = async function() {
   localStorage.removeItem('golf_reservas_migrated_to_firestore');
   console.log('[debug] 🔄 forzando re-migración...');
-  await migrateLocalReservationsToFirestore();
+  await window.migrateLocalReservationsToFirestore();
 };
+
+// Confirmar que las funciones globales están disponibles
+console.log('[init] ✅ funciones globales de migración registradas:', {
+  migrateLocalReservationsToFirestore: typeof window.migrateLocalReservationsToFirestore,
+  forceMigration: typeof window.forceMigration
+});
 
 // ===== VARIABLES GLOBALES =====
 let currentUser = null;        // Usuario actual autenticado
@@ -2273,7 +2279,11 @@ console.log('[app] sistema inicializado');
       console.log('[booking] 📥 cargando reservas desde Firestore...');
 
       // Migrar reservas existentes de localStorage a Firestore (solo una vez)
-      await migrateLocalReservationsToFirestore();
+      if (typeof window.migrateLocalReservationsToFirestore === 'function') {
+        await window.migrateLocalReservationsToFirestore();
+      } else {
+        console.warn('[booking] función migrateLocalReservationsToFirestore no disponible, continuando sin migración');
+      }
 
       // Cargar reservas desde Firestore
       const reservasQuery = query(
@@ -2763,7 +2773,11 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
       console.log('[reservas] cargando reservas desde Firestore...');
 
       // Migrar reservas existentes de localStorage a Firestore (solo una vez)
-      await migrateLocalReservationsToFirestore();
+      if (typeof window.migrateLocalReservationsToFirestore === 'function') {
+        await window.migrateLocalReservationsToFirestore();
+      } else {
+        console.warn('[reservas] función migrateLocalReservationsToFirestore no disponible, continuando sin migración');
+      }
 
       // Obtener todas las reservas desde Firestore ordenadas por fecha y hora
       const reservasQuery = query(
