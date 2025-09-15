@@ -41,12 +41,23 @@ service cloud.firestore {
     match /usuarios/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     // Formularios: solo usuarios autenticados pueden crear
     match /formularios/{document} {
       allow read, write: if request.auth != null;
     }
-    
+
+    // Reservas: usuarios autenticados pueden crear y leer todas las reservas
+    match /reservas/{document} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Videos públicos: lectura pública, escritura autenticada
+    match /videos_publicos/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Config: solo lectura pública
     match /config/{document} {
       allow read: if true;
