@@ -418,6 +418,30 @@ body {
   outline-offset: 2px;
 }
 
+/* Download CSV Button Styles */
+#download-csv {
+  border: 2px solid var(--md-primary) !important;
+  color: var(--md-primary) !important;
+  background: transparent !important;
+  border-radius: 20px !important;
+  min-height: 36px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all var(--md-motion-duration-short3) var(--md-motion-easing-standard);
+}
+
+#download-csv:hover {
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--md-elevation-2);
+}
+
+#download-csv:active {
+  transform: translateY(0px);
+  box-shadow: var(--md-elevation-1);
+}
+
 /* Alumnos List Styles */
 .listado ul {
   list-style: none;
