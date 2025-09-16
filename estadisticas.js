@@ -76,16 +76,33 @@ async function checkAdminStatus(user) {
     const userDoc = doc(window.firebaseDb, 'usuarios', user.uid);
     const userSnap = await getDoc(userDoc);
 
-    if (userSnap.exists() && userSnap.data().admin === true) {
-      console.log('Usuario administrador confirmado');
-      loadAllData();
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const isAdmin = userData.admin === true;
+      const isCliente = userData.cliente === true;
+
+      if (isAdmin || isCliente) {
+        console.log('Usuario autorizado:', isAdmin ? 'admin' : 'cliente');
+
+        // Configurar modo cliente si es necesario
+        if (isCliente) {
+          window.isClienteMode = true;
+          console.log('Modo cliente activado para estadísticas');
+        }
+
+        loadAllData();
+      } else {
+        console.log('Usuario sin permisos, redirigiendo...');
+        alert('Acceso denegado: solo administradores y clientes pueden ver estadísticas');
+        window.location.href = './index.html';
+      }
     } else {
-      console.log('Usuario no es administrador, redirigiendo...');
-      alert('Acceso denegado: solo administradores pueden ver estadísticas');
+      console.log('Usuario no encontrado en base de datos, redirigiendo...');
+      alert('Usuario no encontrado');
       window.location.href = './index.html';
     }
   } catch (error) {
-    console.error('Error verificando estado de admin:', error);
+    console.error('Error verificando estado de usuario:', error);
     showErrorState();
   }
 }
@@ -112,19 +129,274 @@ async function loadAllData() {
 
 async function loadStudentsData() {
   try {
-    const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const q = query(collection(window.firebaseDb, 'formularios'), orderBy('nombre'));
-    const querySnapshot = await getDocs(q);
+    if (window.isClienteMode) {
+      // Cargar datos demo para clientes
+      console.log('Cargando alumnos demo para cliente');
+      try {
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const querySnapshot = await getDocs(collection(window.firebaseDb, 'demo_alumnos'));
 
-    studentsData = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      studentsData.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || data.updatedAt?.toDate() || new Date()
+        studentsData = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          studentsData.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || data.updatedAt?.toDate() || new Date()
+          });
+        });
+      } catch (error) {
+        console.warn('Error cargando alumnos demo desde Firestore, usando datos por defecto:', error);
+        // Datos demo por defecto con crecimiento gradual desde enero 2025
+        studentsData = [
+          // Enero 2025 - Primeros 3 alumnos
+          {
+            id: 'demo1',
+            nombre: 'Juan Pérez Demo',
+            email: 'juan.demo@ejemplo.com',
+            edad: '35',
+            nacimiento: '1989-05-15',
+            handicap: '18',
+            modalidad: 'Individual',
+            ciudad: 'Buenos Aires',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Ingeniero',
+            createdAt: new Date('2025-01-08')
+          },
+          {
+            id: 'demo2',
+            nombre: 'María González Demo',
+            email: 'maria.demo@ejemplo.com',
+            edad: '28',
+            nacimiento: '1996-08-22',
+            handicap: '12',
+            modalidad: 'Grupal',
+            ciudad: 'Córdoba',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Doctora',
+            createdAt: new Date('2025-01-15')
+          },
+          {
+            id: 'demo3',
+            nombre: 'Carlos López Demo',
+            email: 'carlos.demo@ejemplo.com',
+            edad: '42',
+            nacimiento: '1982-11-03',
+            handicap: '24',
+            modalidad: 'Individual',
+            ciudad: 'Rosario',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Contador',
+            createdAt: new Date('2025-01-22')
+          },
+          // Febrero 2025 - +2 alumnos
+          {
+            id: 'demo4',
+            nombre: 'Ana Martínez Demo',
+            email: 'ana.demo@ejemplo.com',
+            edad: '31',
+            nacimiento: '1993-12-18',
+            handicap: '15',
+            modalidad: 'Grupal',
+            ciudad: 'Mendoza',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Arquitecta',
+            createdAt: new Date('2025-02-05')
+          },
+          {
+            id: 'demo5',
+            nombre: 'Luis Rodriguez Demo',
+            email: 'luis.demo@ejemplo.com',
+            edad: '38',
+            nacimiento: '1986-07-09',
+            handicap: '20',
+            modalidad: 'Individual',
+            ciudad: 'La Plata',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Abogado',
+            createdAt: new Date('2025-02-18')
+          },
+          // Marzo 2025 - +2 alumnos
+          {
+            id: 'demo6',
+            nombre: 'Sofia Fernández Demo',
+            email: 'sofia.demo@ejemplo.com',
+            edad: '26',
+            nacimiento: '1998-03-12',
+            handicap: '8',
+            modalidad: 'Individual',
+            ciudad: 'Salta',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Diseñadora',
+            createdAt: new Date('2025-03-07')
+          },
+          {
+            id: 'demo7',
+            nombre: 'Roberto Silva Demo',
+            email: 'roberto.demo@ejemplo.com',
+            edad: '45',
+            nacimiento: '1979-09-30',
+            handicap: '22',
+            modalidad: 'Grupal',
+            ciudad: 'Tucumán',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Empresario',
+            createdAt: new Date('2025-03-20')
+          },
+          // Abril 2025 - +2 alumnos
+          {
+            id: 'demo8',
+            nombre: 'Elena Morales Demo',
+            email: 'elena.demo@ejemplo.com',
+            edad: '33',
+            nacimiento: '1991-06-25',
+            handicap: '16',
+            modalidad: 'Individual',
+            ciudad: 'Neuquén',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Psicóloga',
+            createdAt: new Date('2025-04-10')
+          },
+          {
+            id: 'demo9',
+            nombre: 'Diego Herrera Demo',
+            email: 'diego.demo@ejemplo.com',
+            edad: '29',
+            nacimiento: '1995-11-14',
+            handicap: '14',
+            modalidad: 'Grupal',
+            ciudad: 'Mar del Plata',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Programador',
+            createdAt: new Date('2025-04-25')
+          },
+          // Mayo 2025 - +2 alumnos
+          {
+            id: 'demo10',
+            nombre: 'Valentina Castro Demo',
+            email: 'valentina.demo@ejemplo.com',
+            edad: '24',
+            nacimiento: '2000-01-08',
+            handicap: '10',
+            modalidad: 'Individual',
+            ciudad: 'Bahía Blanca',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Estudiante',
+            createdAt: new Date('2025-05-12')
+          },
+          {
+            id: 'demo11',
+            nombre: 'Francisco Ruiz Demo',
+            email: 'francisco.demo@ejemplo.com',
+            edad: '52',
+            nacimiento: '1972-04-17',
+            handicap: '28',
+            modalidad: 'Individual',
+            ciudad: 'Santa Fe',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Médico',
+            createdAt: new Date('2025-05-28')
+          },
+          // Junio 2025 - +2 alumnos
+          {
+            id: 'demo12',
+            nombre: 'Camila Torres Demo',
+            email: 'camila.demo@ejemplo.com',
+            edad: '27',
+            nacimiento: '1997-08-05',
+            handicap: '13',
+            modalidad: 'Grupal',
+            ciudad: 'Corrientes',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Veterinaria',
+            createdAt: new Date('2025-06-08')
+          },
+          {
+            id: 'demo13',
+            nombre: 'Mateo Jiménez Demo',
+            email: 'mateo.demo@ejemplo.com',
+            edad: '36',
+            nacimiento: '1988-12-02',
+            handicap: '19',
+            modalidad: 'Individual',
+            ciudad: 'Formosa',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Profesor',
+            createdAt: new Date('2025-06-22')
+          },
+          // Julio 2025 - +2 alumnos
+          {
+            id: 'demo14',
+            nombre: 'Isabella Vargas Demo',
+            email: 'isabella.demo@ejemplo.com',
+            edad: '30',
+            nacimiento: '1994-10-18',
+            handicap: '11',
+            modalidad: 'Grupal',
+            ciudad: 'Jujuy',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Farmacéutica',
+            createdAt: new Date('2025-07-15')
+          },
+          {
+            id: 'demo15',
+            nombre: 'Alejandro Peña Demo',
+            email: 'alejandro.demo@ejemplo.com',
+            edad: '40',
+            nacimiento: '1984-02-28',
+            handicap: '21',
+            modalidad: 'Individual',
+            ciudad: 'Catamarca',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Consultor',
+            createdAt: new Date('2025-07-30')
+          },
+          // Agosto 2025 - +2 alumnos
+          {
+            id: 'demo16',
+            nombre: 'Lucía Moreno Demo',
+            email: 'lucia.demo@ejemplo.com',
+            edad: '25',
+            nacimiento: '1999-07-12',
+            handicap: '9',
+            modalidad: 'Individual',
+            ciudad: 'San Luis',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Nutricionista',
+            createdAt: new Date('2025-08-10')
+          },
+          {
+            id: 'demo17',
+            nombre: 'Gabriel Romero Demo',
+            email: 'gabriel.demo@ejemplo.com',
+            edad: '48',
+            nacimiento: '1976-05-22',
+            handicap: '25',
+            modalidad: 'Grupal',
+            ciudad: 'Río Negro',
+            nacionalidad: 'Argentina',
+            ocupacion: 'Ingeniero Civil',
+            createdAt: new Date('2025-08-25')
+          }
+        ];
+      }
+    } else {
+      // Cargar datos reales para admin
+      console.log('Cargando alumnos reales para admin');
+      const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      const q = query(collection(window.firebaseDb, 'formularios'), orderBy('nombre'));
+      const querySnapshot = await getDocs(q);
+
+      studentsData = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        studentsData.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || data.updatedAt?.toDate() || new Date()
+        });
       });
-    });
+    }
 
     console.log(`Cargados ${studentsData.length} alumnos`);
   } catch (error) {
@@ -135,19 +407,301 @@ async function loadStudentsData() {
 
 async function loadBookingsData() {
   try {
-    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const querySnapshot = await getDocs(collection(window.firebaseDb, 'reservas'));
+    if (window.isClienteMode) {
+      // Cargar datos demo para clientes
+      console.log('Cargando reservas demo para cliente');
+      try {
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const querySnapshot = await getDocs(collection(window.firebaseDb, 'demo_reservas'));
 
-    bookingsData = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      bookingsData.push({
-        id: doc.id,
-        ...data,
-        fecha: new Date(data.fecha),
-        createdAt: data.createdAt?.toDate() || new Date()
+        bookingsData = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          bookingsData.push({
+            id: doc.id,
+            ...data,
+            fecha: new Date(data.fecha),
+            createdAt: data.createdAt?.toDate() || new Date()
+          });
+        });
+      } catch (error) {
+        console.warn('Error cargando reservas demo desde Firestore, usando datos por defecto:', error);
+        // Datos demo por defecto de reservas para 2025
+        bookingsData = [
+          // Enero 2025 - Primeras reservas de los primeros 3 alumnos
+          {
+            id: 'booking1',
+            nombre: 'Juan Pérez Demo',
+            fecha: new Date('2025-01-10'),
+            hora: '09:00',
+            createdAt: new Date('2025-01-09')
+          },
+          {
+            id: 'booking2',
+            nombre: 'María González Demo',
+            fecha: new Date('2025-01-17'),
+            hora: '10:30',
+            createdAt: new Date('2025-01-16')
+          },
+          {
+            id: 'booking3',
+            nombre: 'Carlos López Demo',
+            fecha: new Date('2025-01-24'),
+            hora: '14:00',
+            createdAt: new Date('2025-01-23')
+          },
+
+          // Febrero 2025 - Más reservas de alumnos existentes + nuevos
+          {
+            id: 'booking4',
+            nombre: 'Juan Pérez Demo',
+            fecha: new Date('2025-02-07'),
+            hora: '15:30',
+            createdAt: new Date('2025-02-06')
+          },
+          {
+            id: 'booking5',
+            nombre: 'Ana Martínez Demo',
+            fecha: new Date('2025-02-10'),
+            hora: '11:00',
+            createdAt: new Date('2025-02-09')
+          },
+          {
+            id: 'booking6',
+            nombre: 'Luis Rodriguez Demo',
+            fecha: new Date('2025-02-20'),
+            hora: '16:00',
+            createdAt: new Date('2025-02-19')
+          },
+          {
+            id: 'booking7',
+            nombre: 'María González Demo',
+            fecha: new Date('2025-02-28'),
+            hora: '12:30',
+            createdAt: new Date('2025-02-27')
+          },
+
+          // Marzo 2025 - Incluir a los nuevos alumnos
+          {
+            id: 'booking8',
+            nombre: 'Sofia Fernández Demo',
+            fecha: new Date('2025-03-10'),
+            hora: '09:30',
+            createdAt: new Date('2025-03-09')
+          },
+          {
+            id: 'booking9',
+            nombre: 'Roberto Silva Demo',
+            fecha: new Date('2025-03-25'),
+            hora: '13:00',
+            createdAt: new Date('2025-03-24')
+          },
+          {
+            id: 'booking10',
+            nombre: 'Carlos López Demo',
+            fecha: new Date('2025-03-30'),
+            hora: '10:00',
+            createdAt: new Date('2025-03-29')
+          },
+
+          // Abril 2025 - Actividad creciente
+          {
+            id: 'booking11',
+            nombre: 'Elena Morales Demo',
+            fecha: new Date('2025-04-12'),
+            hora: '14:30',
+            createdAt: new Date('2025-04-11')
+          },
+          {
+            id: 'booking12',
+            nombre: 'Diego Herrera Demo',
+            fecha: new Date('2025-04-26'),
+            hora: '11:30',
+            createdAt: new Date('2025-04-25')
+          },
+          {
+            id: 'booking13',
+            nombre: 'Juan Pérez Demo',
+            fecha: new Date('2025-04-15'),
+            hora: '16:30',
+            createdAt: new Date('2025-04-14')
+          },
+          {
+            id: 'booking14',
+            nombre: 'Ana Martínez Demo',
+            fecha: new Date('2025-04-20'),
+            hora: '08:30',
+            createdAt: new Date('2025-04-19')
+          },
+
+          // Mayo 2025 - Mayor actividad
+          {
+            id: 'booking15',
+            nombre: 'Valentina Castro Demo',
+            fecha: new Date('2025-05-15'),
+            hora: '09:00',
+            createdAt: new Date('2025-05-14')
+          },
+          {
+            id: 'booking16',
+            nombre: 'Francisco Ruiz Demo',
+            fecha: new Date('2025-05-30'),
+            hora: '17:00',
+            createdAt: new Date('2025-05-29')
+          },
+          {
+            id: 'booking17',
+            nombre: 'María González Demo',
+            fecha: new Date('2025-05-08'),
+            hora: '13:30',
+            createdAt: new Date('2025-05-07')
+          },
+          {
+            id: 'booking18',
+            nombre: 'Sofia Fernández Demo',
+            fecha: new Date('2025-05-22'),
+            hora: '15:00',
+            createdAt: new Date('2025-05-21')
+          },
+
+          // Junio 2025 - Pico de actividad
+          {
+            id: 'booking19',
+            nombre: 'Camila Torres Demo',
+            fecha: new Date('2025-06-10'),
+            hora: '10:00',
+            createdAt: new Date('2025-06-09')
+          },
+          {
+            id: 'booking20',
+            nombre: 'Mateo Jiménez Demo',
+            fecha: new Date('2025-06-25'),
+            hora: '14:00',
+            createdAt: new Date('2025-06-24')
+          },
+          {
+            id: 'booking21',
+            nombre: 'Luis Rodriguez Demo',
+            fecha: new Date('2025-06-12'),
+            hora: '16:00',
+            createdAt: new Date('2025-06-11')
+          },
+          {
+            id: 'booking22',
+            nombre: 'Elena Morales Demo',
+            fecha: new Date('2025-06-18'),
+            hora: '11:00',
+            createdAt: new Date('2025-06-17')
+          },
+          {
+            id: 'booking23',
+            nombre: 'Roberto Silva Demo',
+            fecha: new Date('2025-06-28'),
+            hora: '12:00',
+            createdAt: new Date('2025-06-27')
+          },
+
+          // Julio 2025 - Actividad sostenida
+          {
+            id: 'booking24',
+            nombre: 'Isabella Vargas Demo',
+            fecha: new Date('2025-07-18'),
+            hora: '09:30',
+            createdAt: new Date('2025-07-17')
+          },
+          {
+            id: 'booking25',
+            nombre: 'Alejandro Peña Demo',
+            fecha: new Date('2025-08-02'),
+            hora: '15:30',
+            createdAt: new Date('2025-08-01')
+          },
+          {
+            id: 'booking26',
+            nombre: 'Diego Herrera Demo',
+            fecha: new Date('2025-07-10'),
+            hora: '13:00',
+            createdAt: new Date('2025-07-09')
+          },
+          {
+            id: 'booking27',
+            nombre: 'Valentina Castro Demo',
+            fecha: new Date('2025-07-25'),
+            hora: '17:30',
+            createdAt: new Date('2025-07-24')
+          },
+
+          // Agosto 2025 - Nuevos alumnos activos
+          {
+            id: 'booking28',
+            nombre: 'Lucía Moreno Demo',
+            fecha: new Date('2025-08-12'),
+            hora: '10:30',
+            createdAt: new Date('2025-08-11')
+          },
+          {
+            id: 'booking29',
+            nombre: 'Gabriel Romero Demo',
+            fecha: new Date('2025-08-28'),
+            hora: '14:30',
+            createdAt: new Date('2025-08-27')
+          },
+          {
+            id: 'booking30',
+            nombre: 'Camila Torres Demo',
+            fecha: new Date('2025-08-15'),
+            hora: '11:30',
+            createdAt: new Date('2025-08-14')
+          },
+          {
+            id: 'booking31',
+            nombre: 'Juan Pérez Demo',
+            fecha: new Date('2025-08-20'),
+            hora: '16:00',
+            createdAt: new Date('2025-08-19')
+          },
+
+          // Septiembre 2025 - Actividad actual
+          {
+            id: 'booking32',
+            nombre: 'Francisco Ruiz Demo',
+            fecha: new Date('2025-09-05'),
+            hora: '08:30',
+            createdAt: new Date('2025-09-04')
+          },
+          {
+            id: 'booking33',
+            nombre: 'Mateo Jiménez Demo',
+            fecha: new Date('2025-09-12'),
+            hora: '12:30',
+            createdAt: new Date('2025-09-11')
+          },
+          {
+            id: 'booking34',
+            nombre: 'Isabella Vargas Demo',
+            fecha: new Date('2025-09-18'),
+            hora: '15:00',
+            createdAt: new Date('2025-09-17')
+          }
+        ];
+      }
+    } else {
+      // Cargar datos reales para admin
+      console.log('Cargando reservas reales para admin');
+      const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      const querySnapshot = await getDocs(collection(window.firebaseDb, 'reservas'));
+
+      bookingsData = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        bookingsData.push({
+          id: doc.id,
+          ...data,
+          fecha: new Date(data.fecha),
+          createdAt: data.createdAt?.toDate() || new Date()
+        });
       });
-    });
+    }
 
     console.log(`Cargadas ${bookingsData.length} reservas`);
   } catch (error) {

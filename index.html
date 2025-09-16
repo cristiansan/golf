@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Golf App v1.7 — Formulario, Links y QR</title>
+    <title>Golf App v1.8 — Formulario, Links y QR</title>
     
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,7 +92,7 @@
           <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-3/4 mx-auto block opacity-90 rounded-full" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.7</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.8</button>
           </div>
         </div>
       </div>
@@ -466,11 +466,22 @@
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-lg">Changelog - v1.7</h3>
+          <h3 class="font-semibold text-lg">Changelog - v1.8</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         
         <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <div class="font-medium mb-1 text-purple-400">v1.8 🎭</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>NUEVA FUNCIONALIDAD - SISTEMA CLIENTE/DEMO:</strong> Usuarios "cliente" pueden ver toda la funcionalidad admin en modo solo lectura.</li>
+              <li><strong>DATOS DEMO SEPARADOS:</strong> 17 alumnos demo con crecimiento gradual desde enero 2025 (+2 por mes) y 34 reservas realistas.</li>
+              <li><strong>ESTADÍSTICAS DEMO:</strong> Gráficos convincentes con crecimiento orgánico y métricas realistas para demostraciones.</li>
+              <li><strong>INTERFAZ DEMO:</strong> Botones deshabilitados con mensajes informativos e indicador visual "DEMO" en la interfaz.</li>
+              <li><strong>DATOS REGIONALES:</strong> Diversidad argentina en alumnos demo con provincias y profesiones variadas.</li>
+              <li><strong>HERRAMIENTAS DEBUG:</strong> Función debugClienteStatus() para diagnóstico técnico del sistema de roles.</li>
+            </ul>
+          </div>
           <div class="border-b pb-3" style="border-color: var(--border)">
             <div class="font-medium mb-1 text-blue-400">v1.7 📊</div>
             <ul class="list-disc pl-5 space-y-1">
@@ -561,7 +572,7 @@
         </div>
         
         <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
-          <p class="text-sm text-gray-400">Golf App v1.7 - Luciano Sancho Golf</p>
+          <p class="text-sm text-gray-400">Golf App v1.8 - Luciano Sancho Golf</p>
         </div>
       </div>
     </div>

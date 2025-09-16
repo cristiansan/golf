@@ -1,4 +1,4 @@
-// ===== GOLF APP v1.7 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.8 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
@@ -7,6 +7,19 @@
 // - Sistema de reservas con calendario
 // - Generador de QR
 // - Funcionalidades de administrador
+//
+// === CHANGELOG v1.8 ===
+// 🎭 NUEVA FUNCIONALIDAD: Sistema completo de usuarios cliente/demo
+//    - Nuevos usuarios "cliente" pueden ver toda la funcionalidad admin en modo solo lectura
+//    - Datos demo separados completamente de datos reales de producción
+//    - 17 alumnos demo con crecimiento gradual desde enero 2025 (+2 por mes)
+//    - 34 reservas demo distribuidas realísticamente a lo largo de 2025
+//    - Estadísticas demo con gráficos de crecimiento orgánico y métricas convincentes
+//    - Botones deshabilitados con mensajes informativos en modo demo
+//    - Indicador visual "DEMO" en interfaz para claridad del usuario
+//    - Función debugClienteStatus() para diagnóstico técnico
+//    - Datos demo incluyen diversidad regional y profesional argentina
+//    - Perfecta experiencia de demostración para potenciales clientes
 //
 // === CHANGELOG v1.7 ===
 // 📊 NUEVA FUNCIONALIDAD: Sistema completo de estadísticas para administradores
@@ -259,6 +272,7 @@ console.log('[init] ✅ funciones globales de migración registradas:', {
 // ===== VARIABLES GLOBALES =====
 let currentUser = null;        // Usuario actual autenticado
 let isUserAdmin = false;       // Si el usuario tiene permisos de administrador
+let isUserCliente = false;     // Si el usuario es un cliente/demo (solo lectura)
 
 // ===== FUNCIONES DE VISIBILIDAD DE LA APP =====
 // Función para mostrar/ocultar la app según el estado de auth
@@ -722,39 +736,322 @@ function updateAdminUI(isAdmin) {
   }
 }
 
+// ===== FUNCIÓN PARA ACTUALIZAR UI SEGÚN TIPO DE USUARIO =====
+function updateUserUI(isAdmin, isCliente) {
+  console.log('[user] 🔍 updateUserUI llamado con:', { isAdmin, isCliente });
+
+  // Actualizar variables globales
+  isUserAdmin = isAdmin;
+  isUserCliente = isCliente;
+  console.log('[user] 🔍 variables actualizadas:', { isUserAdmin, isUserCliente });
+
+  const header = document.getElementById('nav-admin-header');
+  const group = document.getElementById('nav-admin');
+  console.log('[user] 🔍 elementos encontrados:', { header: !!header, group: !!group });
+
+  // Mostrar menú admin para administradores Y clientes (para demo)
+  if (header && group) {
+    const showAdminMenu = isAdmin || isCliente;
+    console.log('[user] 🔍 showAdminMenu calculado:', showAdminMenu);
+
+    header.style.display = showAdminMenu ? '' : 'none';
+    group.style.display = showAdminMenu ? '' : 'none';
+
+    console.log('[user] ✅ UI de admin actualizada:', {
+      admin: isAdmin,
+      cliente: isCliente,
+      headerDisplay: header.style.display,
+      groupDisplay: group.style.display,
+      showAdminMenu
+    });
+  } else {
+    console.warn('[user] ❌ elementos nav-admin-header o nav-admin no encontrados en DOM');
+    console.log('[user] 🔍 header existe:', !!header);
+    console.log('[user] 🔍 group existe:', !!group);
+  }
+
+  // Configurar menú según tipo de usuario
+  if (isCliente) {
+    // Usuario cliente/demo: configurar vista de solo lectura pero con acceso a funciones admin
+    console.log('[user] 🔍 configurando vista de cliente/demo');
+    ensureAlumnosNav(); // Los clientes también ven alumnos (pero datos demo)
+    setupClienteUI();
+  } else if (isAdmin) {
+    // Usuario administrador: acceso completo
+    console.log('[user] 🔍 configurando vista de administrador');
+    ensureAlumnosNav();
+  }
+
+  // Mostrar/ocultar pestaña de Notas en el formulario (solo admin)
+  const notasTabBtn = document.getElementById('tab-notas-btn');
+  if (notasTabBtn) {
+    notasTabBtn.classList.toggle('hidden', !isAdmin);
+  }
+
+  // Inicializar funcionalidades específicas
+  if (isAdmin) {
+    initNotasFunctionality();
+  }
+
+  // Agregar indicador visual del modo demo
+  if (isCliente) {
+    addDemoModeIndicator();
+  }
+
+  // Re-renderizar videos con el nuevo estado
+  console.log('[user] 🎬 Re-renderizando contenido con nuevo estado usuario');
+  setTimeout(() => {
+    renderVideos();
+  }, 100);
+}
+
+// ===== CONFIGURACIÓN ESPECÍFICA PARA USUARIOS CLIENTE/DEMO =====
+function setupClienteUI() {
+  console.log('[cliente] 🎭 configurando interfaz para usuario demo');
+
+  // Deshabilitar todos los botones de envío y modificación
+  disableModificationButtons();
+
+  // Agregar mensaje de solo lectura a las secciones
+  addReadOnlyMessages();
+
+  // Configurar datos demo en lugar de datos reales
+  window.isClienteMode = true;
+}
+
+function disableModificationButtons() {
+  // Deshabilitar botones de envío de formularios
+  const submitButtons = document.querySelectorAll('button[type="submit"], .btn-primary');
+  submitButtons.forEach(btn => {
+    btn.disabled = true;
+    btn.title = 'Modo demo - Solo lectura';
+    btn.style.opacity = '0.6';
+  });
+
+  // Deshabilitar campos de formulario
+  const inputs = document.querySelectorAll('input, textarea, select');
+  inputs.forEach(input => {
+    input.disabled = true;
+  });
+
+  console.log('[cliente] 🚫 botones y campos deshabilitados para modo demo');
+}
+
+function addReadOnlyMessages() {
+  // Agregar mensaje de solo lectura a secciones relevantes
+  const sections = ['sec-formulario', 'sec-reserva', 'sec-links'];
+
+  sections.forEach(sectionId => {
+    const section = document.getElementById(sectionId);
+    if (section && !section.querySelector('.demo-message')) {
+      const message = document.createElement('div');
+      message.className = 'demo-message bg-blue-100 border border-blue-300 text-blue-800 px-4 py-2 rounded mb-4';
+      message.innerHTML = '🎭 <strong>Modo Demo:</strong> Esta es una vista de solo lectura para demostración.';
+      section.insertBefore(message, section.firstChild.nextSibling);
+    }
+  });
+}
+
+function addDemoModeIndicator() {
+  // Agregar indicador en el header
+  const header = document.querySelector('header h1');
+  if (header && !header.querySelector('.demo-indicator')) {
+    const indicator = document.createElement('span');
+    indicator.className = 'demo-indicator text-xs bg-blue-500 text-white px-2 py-1 rounded ml-2';
+    indicator.textContent = 'DEMO';
+    header.appendChild(indicator);
+  }
+}
+
+// ===== DATOS DEMO PARA USUARIOS CLIENTE =====
+const demoData = {
+  videos: [
+    {
+      id: 'demo-video-1',
+      title: 'Fundamentos del Swing',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+      createdAt: new Date('2024-01-15').toISOString(),
+      owner: 'demo'
+    },
+    {
+      id: 'demo-video-2',
+      title: 'Técnica de Putting',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+      createdAt: new Date('2024-02-10').toISOString(),
+      owner: 'demo'
+    },
+    {
+      id: 'demo-video-3',
+      title: 'Estrategia en el Campo',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+      createdAt: new Date('2024-03-05').toISOString(),
+      owner: 'demo'
+    }
+  ],
+
+  alumnos: [
+    {
+      id: 'demo-alumno-1',
+      nombre: 'Juan Pérez',
+      email: 'juan.demo@example.com',
+      telefono: '+54 11 1234-5678',
+      edad: '28',
+      nacimiento: '1995-06-15',
+      domicilio: 'Av. Corrientes 1234',
+      ciudad: 'Buenos Aires',
+      nacionalidad: 'Argentina',
+      ocupacion: 'Ingeniero',
+      anios: '3',
+      handicap: '15.2',
+      frecuencia: '2',
+      club: 'Club de Golf Buenos Aires',
+      modalidad: 'Medal Play',
+      clases_previas: 'Sí',
+      createdAt: new Date('2024-01-20').toISOString()
+    },
+    {
+      id: 'demo-alumno-2',
+      nombre: 'María González',
+      email: 'maria.demo@example.com',
+      telefono: '+54 11 9876-5432',
+      edad: '34',
+      nacimiento: '1989-09-22',
+      domicilio: 'Calle Falsa 456',
+      ciudad: 'Rosario',
+      nacionalidad: 'Argentina',
+      ocupacion: 'Doctora',
+      anios: '1',
+      handicap: '28.5',
+      frecuencia: '1',
+      club: 'Rosario Golf Club',
+      modalidad: 'Match Play',
+      clases_previas: 'No',
+      createdAt: new Date('2024-02-14').toISOString()
+    },
+    {
+      id: 'demo-alumno-3',
+      nombre: 'Carlos Rodriguez',
+      email: 'carlos.demo@example.com',
+      telefono: '+54 11 5555-1234',
+      edad: '42',
+      nacimiento: '1981-12-03',
+      domicilio: 'San Martín 789',
+      ciudad: 'Córdoba',
+      nacionalidad: 'Argentina',
+      ocupacion: 'Abogado',
+      anios: '5',
+      handicap: '12.8',
+      frecuencia: '3',
+      club: 'Córdoba Golf',
+      modalidad: 'Medal Play',
+      clases_previas: 'Sí',
+      createdAt: new Date('2024-03-10').toISOString()
+    }
+  ],
+
+  reservas: [
+    {
+      id: 'demo-reserva-1',
+      date: '2024-12-20',
+      time: '10:00',
+      studentName: 'Juan Pérez',
+      studentEmail: 'juan.demo@example.com',
+      instructor: 'Luciano Sancho',
+      amount: 40000,
+      deposit: 20000,
+      status: 'confirmed',
+      duration: '1 hora',
+      createdAt: new Date('2024-12-15').toISOString()
+    },
+    {
+      id: 'demo-reserva-2',
+      date: '2024-12-22',
+      time: '14:00',
+      studentName: 'María González',
+      studentEmail: 'maria.demo@example.com',
+      instructor: 'Luciano Sancho',
+      amount: 40000,
+      deposit: 20000,
+      status: 'confirmed',
+      duration: '1 hora',
+      createdAt: new Date('2024-12-16').toISOString()
+    }
+  ]
+};
+
+// ===== FUNCIONES PARA CARGAR DATOS DEMO =====
+function loadDemoVideos() {
+  console.log('[demo] 🎬 cargando videos demo');
+  return Promise.resolve(demoData.videos);
+}
+
+function loadDemoAlumnos() {
+  console.log('[demo] 👥 cargando alumnos demo');
+  return Promise.resolve(demoData.alumnos);
+}
+
+function loadDemoReservas() {
+  console.log('[demo] 📅 cargando reservas demo');
+  return Promise.resolve(demoData.reservas);
+}
+
 // Verificar si el usuario es admin
 async function checkUserAdminStatus(user) {
   console.log('[auth] 🔍 checkUserAdminStatus llamado para usuario:', user?.email);
-  
+
   if (!user) {
     console.log('[auth] ❌ no hay usuario');
     return false;
   }
-  
+
   try {
     console.log('[auth] 🔍 consultando Firestore para uid:', user.uid);
     const userRef = doc(db, 'usuarios', user.uid);
     const userSnap = await getDoc(userRef);
-    
+
     if (userSnap.exists()) {
       const userData = userSnap.data();
       const isAdmin = userData.admin === true;
-      console.log('[auth] ✅ usuario encontrado en Firestore, admin:', isAdmin);
-      console.log('[auth] 🔍 datos del usuario:', userData);
-      
-      // Actualizar UI de admin
-      console.log('[auth] 🔍 llamando updateAdminUI con isAdmin:', isAdmin);
-      updateAdminUI(isAdmin);
-      return isAdmin;
+      const isCliente = userData.cliente === true;
+      console.log('[auth] ✅ usuario encontrado en Firestore');
+      console.log('[auth] 📧 email:', user.email);
+      console.log('[auth] 🔑 admin:', isAdmin);
+      console.log('[auth] 🎭 cliente:', isCliente);
+      console.log('[auth] 📋 datos completos:', userData);
+
+      // Verificar elementos del menú antes de actualizar UI
+      const header = document.getElementById('nav-admin-header');
+      const group = document.getElementById('nav-admin');
+      console.log('[auth] 🔍 elementos de menú admin encontrados:', { header: !!header, group: !!group });
+
+      // Actualizar UI según el tipo de usuario
+      console.log('[auth] 🔍 llamando updateUserUI con roles:', { isAdmin, isCliente });
+      updateUserUI(isAdmin, isCliente);
+
+      // Verificar después de updateUserUI
+      setTimeout(() => {
+        const headerAfter = document.getElementById('nav-admin-header');
+        const groupAfter = document.getElementById('nav-admin');
+        console.log('[auth] 🔍 elementos después de updateUserUI:', {
+          headerVisible: headerAfter?.style.display !== 'none',
+          groupVisible: groupAfter?.style.display !== 'none'
+        });
+      }, 100);
+
+      return { isAdmin, isCliente };
     } else {
-      console.log('[auth] ❌ usuario no encontrado en Firestore');
-      updateAdminUI(false);
-      return false;
+      console.log('[auth] ❌ usuario no encontrado en Firestore para email:', user.email);
+      console.log('[auth] ❌ uid consultado:', user.uid);
+      updateUserUI(false, false);
+      return { isAdmin: false, isCliente: false };
     }
   } catch (error) {
     console.error('[auth] ❌ error verificando admin:', error);
-    updateAdminUI(false);
-    return false;
+    updateUserUI(false, false);
+    return { isAdmin: false, isCliente: false };
   }
 }
 
@@ -2108,10 +2405,18 @@ async function renderVideos() {
   }
   
   try {
-    // Cargar videos desde Firebase
-    console.log('[videos] 📥 cargando videos desde Firebase...');
-    const videos = await loadVideosFromFirebase();
-    console.log('[videos] ✅ videos cargados desde Firebase:', videos.length);
+    let videos;
+
+    // Cargar videos según el tipo de usuario
+    if (isUserCliente) {
+      console.log('[videos] 🎭 cargando videos demo para usuario cliente...');
+      videos = await loadDemoVideos();
+    } else {
+      console.log('[videos] 📥 cargando videos desde Firebase...');
+      videos = await loadVideosFromFirebase();
+    }
+
+    console.log('[videos] ✅ videos cargados:', videos.length);
     
     if (videos.length === 0) {
       console.log('[videos] 📝 no hay videos, mostrando mensaje');
@@ -2839,8 +3144,12 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
       }
 
       // Obtener todas las reservas desde Firestore ordenadas por fecha y hora
+      // Usar colección demo si es cliente, real si es admin
+      const collectionName = window.isClienteMode ? 'demo_reservas' : 'reservas';
+      console.log('[reservas] usando colección:', collectionName);
+
       const reservasQuery = query(
-        collection(db, 'reservas'),
+        collection(db, collectionName),
         orderBy('date', 'desc'),
         orderBy('time', 'desc')
       );
@@ -3026,14 +3335,21 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     try {
       console.log('[reservas] solicitando eliminación de reserva:', reservaId);
 
+      // Verificar si es cliente en modo demo
+      if (window.isClienteMode) {
+        alert('Modo demo - No se pueden eliminar reservas en modo de prueba');
+        return;
+      }
+
       // Confirmar eliminación
       if (!confirm('¿Estás seguro de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) {
         return;
       }
 
       try {
-        // Eliminar de Firestore
-        const reservaRef = doc(db, 'reservas', reservaId);
+        // Eliminar de Firestore (usar colección correcta)
+        const collectionName = window.isClienteMode ? 'demo_reservas' : 'reservas';
+        const reservaRef = doc(db, collectionName, reservaId);
         await deleteDoc(reservaRef);
         console.log('[reservas] reserva eliminada de Firestore:', reservaId);
       } catch (firestoreError) {
@@ -3093,3 +3409,44 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
   
   console.log('[reservas] sistema de gestión de reservas inicializado');
 })();
+
+// ===== FUNCIÓN DE DEBUG PARA VERIFICAR ESTADO CLIENTE =====
+window.debugClienteStatus = function() {
+  console.log('=== DEBUG CLIENTE STATUS ===');
+  console.log('currentUser:', currentUser?.email);
+  console.log('isUserAdmin:', isUserAdmin);
+  console.log('isUserCliente:', isUserCliente);
+  console.log('window.isClienteMode:', window.isClienteMode);
+
+  // Verificar elementos del DOM
+  const header = document.getElementById('nav-admin-header');
+  const group = document.getElementById('nav-admin');
+  console.log('nav-admin-header existe:', !!header);
+  console.log('nav-admin-header display:', header?.style.display);
+  console.log('nav-admin existe:', !!group);
+  console.log('nav-admin display:', group?.style.display);
+
+  // Intentar verificar el estado en Firestore manualmente
+  if (currentUser) {
+    console.log('Verificando en Firestore...');
+    const userRef = doc(db, 'usuarios', currentUser.uid);
+    getDoc(userRef).then(userSnap => {
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        console.log('Datos Firestore:', userData);
+        console.log('admin:', userData.admin);
+        console.log('cliente:', userData.cliente);
+      } else {
+        console.log('Usuario no encontrado en Firestore');
+      }
+    }).catch(error => {
+      console.error('Error consultando Firestore:', error);
+    });
+  }
+
+  // Forzar actualización del UI
+  console.log('Forzando actualización de UI...');
+  if (currentUser) {
+    checkUserAdminStatus(currentUser);
+  }
+};
