@@ -287,7 +287,7 @@ body {
   color: #F5F5DC;
   transition: all var(--md-motion-duration-short2) var(--md-motion-easing-standard);
   border-radius: 8px;
-  margin: 4px;
+  margin: 4px 4px 4px 4px;
   font-weight: 500;
   border: 1px solid var(--md-outline-variant);
   background: var(--md-surface-container-low);
