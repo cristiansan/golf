@@ -64,7 +64,7 @@ function renderList(items){
   if (!ul) return;
   const rows = items.map((it, idx)=>{
     const nombre = normalizeName(it.nombre) || 'Sin nombre';
-    return `<li><button class="w-full text-left font-medium" data-idx="${idx}">${nombre}</button></li>`;
+    return `<li><button class="md-navigation-item w-full text-left font-medium" data-idx="${idx}">${nombre}</button></li>`;
   });
   ul.innerHTML = rows.join('');
   if (count) count.textContent = `${items.length} alumno${items.length===1?'':'s'}`;

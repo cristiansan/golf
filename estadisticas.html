@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Estadísticas - Golf App</title>
+
+  <!-- Fuentes y estilos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="./material-design.css?v=1" />
+  <script defer src="./material-interactions.js?v=1"></script>
+
+  <!-- Estilos personalizados -->
+  <style>
+    .stats-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .stats-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--foreground);
+    }
+    .stats-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .stats-metric:last-child { border-bottom: none; }
+    .stats-value {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      margin: 20px 0;
+    }
+    .loading-spinner {
+      border: 4px solid var(--border);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 border-b" style="border-color: var(--border)">
+    <div class="container flex items-center gap-3 py-1 relative">
+      <button id="btn-back" class="p-1 rounded-md border btn mr-2" style="border-color: var(--border);" aria-label="Volver">
+        <i data-lucide="arrow-left"></i>
+      </button>
+      <h1 class="text-lg font-semibold">Estadísticas - Golf App</h1>
+      <div class="absolute top-1 right-0 flex items-center gap-2">
+        <button id="btn-refresh" class="px-3 py-1 rounded-md border btn text-sm" style="border-color: var(--border);">
+          <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i>Actualizar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container py-6">
+
+    <!-- Loading indicator -->
+    <div id="loading" class="text-center py-12">
+      <div class="loading-spinner mx-auto mb-4"></div>
+      <p class="muted">Cargando estadísticas...</p>
+    </div>
+
+    <!-- Stats content -->
+    <div id="stats-content" class="hidden">
+
+      <!-- Quick Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="stats-card text-center">
+          <div class="text-2xl font-bold" id="total-students">0</div>
+          <div class="text-sm muted">Alumnos Registrados</div>
+        </div>
+        <div class="stats-card text-center">
+          <div class="text-2xl font-bold" id="total-bookings">0</div>
+          <div class="text-sm muted">Reservas Totales</div>
+        </div>
+        <div class="stats-card text-center">
+          <div class="text-2xl font-bold" id="app-usage-days">0</div>
+          <div class="text-sm muted">Días de Uso</div>
+        </div>
+        <div class="stats-card text-center">
+          <div class="text-2xl font-bold" id="active-students">0</div>
+          <div class="text-sm muted">Estudiantes Activos</div>
+        </div>
+      </div>
+
+      <!-- Monthly Registrations Chart -->
+      <div class="stats-card">
+        <h2 class="stats-title">Registros por Mes</h2>
+        <div class="chart-container">
+          <canvas id="monthly-registrations-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Daily Bookings Chart -->
+      <div class="stats-card">
+        <h2 class="stats-title">Reservas por Día de la Semana</h2>
+        <div class="chart-container">
+          <canvas id="daily-bookings-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Age Range Chart -->
+      <div class="stats-card">
+        <h2 class="stats-title">Rango Etario</h2>
+        <div class="chart-container">
+          <canvas id="age-range-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Most Active Students -->
+      <div class="stats-card">
+        <h2 class="stats-title">Alumnos Más Activos</h2>
+        <div id="most-active-students">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Additional Stats -->
+      <div class="stats-card">
+        <h2 class="stats-title">Estadísticas Adicionales</h2>
+        <div class="stats-metric">
+          <span>Día con más reservas</span>
+          <span class="stats-value" id="busiest-day">-</span>
+        </div>
+        <div class="stats-metric">
+          <span>Mes de mayor actividad</span>
+          <span class="stats-value" id="busiest-month">-</span>
+        </div>
+        <div class="stats-metric">
+          <span>Horario más solicitado</span>
+          <span class="stats-value" id="popular-time">-</span>
+        </div>
+        <div class="stats-metric">
+          <span>Tiempo promedio de uso de app</span>
+          <span class="stats-value" id="avg-usage">-</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Error state -->
+    <div id="error-state" class="hidden text-center py-12">
+      <i data-lucide="alert-triangle" class="w-16 h-16 mx-auto mb-4 text-red-400"></i>
+      <h3 class="text-lg font-medium mb-2">Error al cargar estadísticas</h3>
+      <p class="muted mb-4">No se pudieron cargar los datos. Verifica tu conexión e intenta nuevamente.</p>
+      <button id="btn-retry" class="px-4 py-2 rounded-md btn-primary">Reintentar</button>
+    </div>
+
+  </main>
+
+  <!-- Firebase Config -->
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: 'AIzaSyCSbupnAd-CH5aCi9b5CvILnIIE74D5M34',
+      authDomain: 'golf-f3b84.firebaseapp.com',
+      projectId: 'golf-f3b84',
+      storageBucket: 'golf-f3b84.appspot.com',
+      messagingSenderId: '179642241287',
+      appId: '1:179642241287:web:c43bdb3d2a1dd37e95b5a2',
+      measurementId: 'G-TXFF1RSFEG'
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Make Firebase available globally
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+  </script>
+
+  <!-- Statistics Script -->
+  <script defer src="./estadisticas.js"></script>
+
+</body>
+</html>

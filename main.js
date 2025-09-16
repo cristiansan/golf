@@ -1,4 +1,4 @@
-// ===== GOLF APP v1.6.1 - ARCHIVO PRINCIPAL =====
+// ===== GOLF APP v1.7 - ARCHIVO PRINCIPAL =====
 // Este archivo contiene toda la lógica de la aplicación:
 // - Inicialización de Firebase y autenticación
 // - Sistema de navegación y secciones
@@ -7,6 +7,15 @@
 // - Sistema de reservas con calendario
 // - Generador de QR
 // - Funcionalidades de administrador
+//
+// === CHANGELOG v1.7 ===
+// 📊 NUEVA FUNCIONALIDAD: Sistema completo de estadísticas para administradores
+//    - Panel de estadísticas con gráficos interactivos (Chart.js)
+//    - Análisis de registros por mes, reservas por día, rango etario
+//    - Métricas avanzadas: alumnos más activos, horario más popular, tiempo de uso
+//    - Botón "Estadísticas" en menú admin con navegación a página dedicada
+//    - Interfaz optimizada: removidos botones de pantalla completa
+//    - Dashboard con métricas clave y visualizaciones responsivas
 //
 // === CHANGELOG v1.6 ===
 // 🔧 ARREGLO FUNCIONAL: Completado sistema de sincronización de reservas
@@ -270,14 +279,21 @@ function switchTo(target){
   // Actualizar calendario cuando se cambie a la sección de reservas
   if (target === 'reserva') {
     console.log('[switchTo] 📅 cambiando a sección reserva');
-    
+
     // Recrear iconos Lucide para los botones del calendario
     setTimeout(() => {
       console.log('[switchTo] 📅 actualizando iconos en sección reserva');
       window.lucide?.createIcons();
     }, 100);
   }
-  
+
+  // Navegar a página de estadísticas
+  if (target === 'estadisticas') {
+    console.log('[switchTo] 📊 navegando a estadísticas');
+    window.location.href = './estadisticas.html';
+    return;
+  }
+
   closeDrawer();
 }
 
@@ -329,7 +345,7 @@ function ensureAlumnosNav(){
     if (!btn) {
       btn = document.createElement('button');
       btn.id = 'nav-alumnos';
-      btn.className = 'w-full text-left px-3 py-2 rounded-md hover:bg-black/20';
+      btn.className = 'md-navigation-item w-full text-left';
       btn.textContent = 'Alumnos';
       btn.addEventListener('click', ()=>{ window.location.href = './alumnos.html'; });
       group.appendChild(btn);
@@ -2645,8 +2661,8 @@ Instructor: Luciano Sancho Golf`;
         date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD
         time: selectedTime,
         status: 'confirmed',
-        amount: 15000,
-        deposit: 7500,
+        amount: 40000,
+        deposit: 20000,
         studentName: currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Usuario',
         studentEmail: currentUser?.email || 'sin-email',
         instructor: 'Luciano Sancho',

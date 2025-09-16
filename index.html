@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Golf App v1.6.1 — Formulario, Links y QR</title>
+    <title>Golf App v1.7 — Formulario, Links y QR</title>
     
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +13,8 @@
     <script defer src="./vendor/qrcode.min.js?v=1"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <link rel="stylesheet" href="./styles.css?v=2" />
+    <link rel="stylesheet" href="./material-design.css?v=1" />
+    <script defer src="./material-interactions.js?v=1"></script>
     
     <!-- Estilos personalizados -->
     <style>
@@ -46,20 +47,19 @@
 
     <!-- ===== HEADER PRINCIPAL ===== -->
     <!-- Barra superior con título, info del usuario y botones de control -->
-    <header class="sticky top-0 z-50 border-b" style="border-color: var(--border)">
+    <header class="md-navigation-bar sticky top-0 z-50">
       <div class="container flex items-center gap-3 py-1 relative">
-        <h1 class="text-lg font-semibold nav-title">Golf App</h1>
+        <h1 class="md-title-large nav-title">Golf App</h1>
         <div class="absolute top-1 right-0 flex items-center gap-2">
           <!-- Info del usuario logueado (oculto por defecto) -->
           <div id="user-info" class="hidden flex items-center gap-2">
             <span id="user-email" class="text-sm muted"></span>
-            <button id="btn-logout" class="px-2 py-1 rounded-md border btn text-xs" style="border-color: var(--border);">Cerrar</button>
+            <button id="btn-logout" class="md-button-text text-xs">Cerrar</button>
           </div>
           <!-- Botón de login (visible cuando no hay usuario) -->
-          <button id="btn-login" class="px-3 py-1 rounded-md border btn text-sm" style="border-color: var(--border);">Iniciar Sesión</button>
+          <button id="btn-login" class="md-button-outlined text-sm">Iniciar Sesión</button>
           <!-- Botones de control -->
-          <button id="btn-fullscreen" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa"><i data-lucide="maximize-2"></i></button>
-          <button id="btn-drawer" class="p-1 rounded-md border btn" style="border-color: var(--border);" aria-controls="app-drawer" aria-label="Abrir menú"><i data-lucide="menu"></i></button>
+          <button id="btn-drawer" class="md-button-outlined p-1" aria-controls="app-drawer" aria-label="Abrir menú"><i data-lucide="menu"></i></button>
         </div>
       </div>
     </header>
@@ -72,16 +72,17 @@
         
         <!-- Navegación principal -->
         <nav class="p-2 space-y-1" style="margin-top: 25px;">
-          <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="formulario">Formulario</button>
-          <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="videos">Videos</button>
-          <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="reserva">Reserva</button>
-          <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="qr">QR</button>
+          <button class="md-navigation-item w-full text-left" data-section="formulario">Formulario</button>
+          <button class="md-navigation-item w-full text-left" data-section="videos">Videos</button>
+          <button class="md-navigation-item w-full text-left" data-section="reserva">Reserva</button>
+          <button class="md-navigation-item w-full text-left" data-section="qr">QR</button>
           
           <!-- Sección de administrador (oculta por defecto) -->
           <div id="nav-admin-header" class="px-3 pt-3 text-xs muted" style="display:none;">Admin</div>
           <div id="nav-admin" class="space-y-1" style="display:none;">
-            <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="links">Agregar Links</button>
-            <button class="w-full text-left px-3 py-2 rounded-md hover:bg-black/20" data-section="reservas">Reservas</button>
+            <button class="md-navigation-item w-full text-left" data-section="links">Agregar Links</button>
+            <button class="md-navigation-item w-full text-left" data-section="reservas">Reservas</button>
+            <button class="md-navigation-item w-full text-left" data-section="estadisticas">Estadísticas</button>
           </div>
         </nav>
         
@@ -91,10 +92,7 @@
           <img id="drawer-logo" src="./logo.jpeg" alt="Logo" class="w-3/4 mx-auto block opacity-90 rounded-full" style="margin-bottom:0" onerror="this.style.display='none'; document.getElementById('logo-fallback')?.classList.remove('hidden');" />
           <div id="logo-fallback" class="hidden mt-2 flex items-center justify-center w-28 h-28 rounded-full border" style="border-color: var(--border); background:#000; color:#fff"><span class="text-xs">LS Golf</span></div>
           <div class="mt-2 text-center">
-            <button id="btn-fullscreen-drawer" class="w-full px-3 py-2 rounded-md border btn text-sm mb-2" style="border-color: var(--border);" aria-label="Pantalla completa" title="Pantalla completa">
-              <i data-lucide="maximize-2" class="w-4 h-4 inline mr-2"></i><span>Pantalla Completa</span>
-            </button>
-            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.6.1</button>
+            <button id="btn-changelog" class="text-[11px] underline hover:no-underline muted">v1.7</button>
           </div>
         </div>
       </div>
@@ -311,7 +309,7 @@
       <section id="sec-reserva" class="card-surface hidden">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-base font-semibold">Reservar Clase</h2>
-          <div class="text-sm muted">1 hora - $15.000</div>
+          <div class="text-sm muted">1 hora - $40.000</div>
         </div>
         
         <!-- Calendario responsive -->
@@ -468,11 +466,22 @@
       <div id="modal-changelog-overlay" class="absolute inset-0 bg-black/60"></div>
       <div class="relative max-w-2xl mx-auto mt-24 bg-black border rounded-lg p-6" style="border-color: var(--border)">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-lg">Changelog - v1.6.1</h3>
+          <h3 class="font-semibold text-lg">Changelog - v1.7</h3>
           <button id="btn-close-changelog" class="p-2 rounded-md border btn" style="border-color: var(--border)"><i data-lucide="x"></i></button>
         </div>
         
         <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-b pb-3" style="border-color: var(--border)">
+            <div class="font-medium mb-1 text-blue-400">v1.7 📊</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>NUEVA FUNCIONALIDAD - ESTADÍSTICAS:</strong> Panel completo de estadísticas para administradores con análisis detallado de datos.</li>
+              <li><strong>GRÁFICOS INTERACTIVOS:</strong> Registros por mes (gráfico de barras), reservas por día de la semana y rango etario (gráfico de torta con valores).</li>
+              <li><strong>MÉTRICAS AVANZADAS:</strong> Alumnos más activos, día con más reservas, horario más solicitado y tiempo de uso de la app.</li>
+              <li><strong>NAVEGACIÓN MEJORADA:</strong> Nuevo botón "Estadísticas" en menú administrativo con página dedicada y botón de retorno.</li>
+              <li><strong>INTERFAZ OPTIMIZADA:</strong> Removidos botones de pantalla completa del header y menú lateral para una experiencia más limpia.</li>
+              <li><strong>DASHBOARD COMPLETO:</strong> Vista consolidada con métricas clave: total de alumnos, reservas, días de uso y estudiantes activos.</li>
+            </ul>
+          </div>
           <div class="border-b pb-3" style="border-color: var(--border)">
             <div class="font-medium mb-1 text-yellow-400">v1.6.1 🔧</div>
             <ul class="list-disc pl-5 space-y-1">
@@ -552,7 +561,7 @@
         </div>
         
         <div class="mt-6 pt-4 border-t text-center" style="border-color: var(--border)">
-          <p class="text-sm text-gray-400">Golf App v1.6.1 - Luciano Sancho Golf</p>
+          <p class="text-sm text-gray-400">Golf App v1.7 - Luciano Sancho Golf</p>
         </div>
       </div>
     </div>

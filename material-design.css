@@ -1,0 +1,447 @@
+/* ===== MATERIAL DESIGN SYSTEM - GOLF APP v1.7 ===== */
+
+/* Material Design 3 Color Palette */
+:root {
+  /* Primary Colors */
+  --md-primary: #00695C;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #6FF6E8;
+  --md-on-primary-container: #002017;
+
+  /* Secondary Colors */
+  --md-secondary: #4A635F;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #CCE8E2;
+  --md-on-secondary-container: #06201C;
+
+  /* Tertiary Colors */
+  --md-tertiary: #456179;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #CCE7FF;
+  --md-on-tertiary-container: #001E30;
+
+  /* Error Colors */
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #410002;
+
+  /* Surface Colors */
+  --md-surface-dim: #0E1414;
+  --md-surface: #141B1B;
+  --md-surface-bright: #3A4040;
+  --md-on-surface: #F5F5DC;
+  --md-on-surface-variant: #F5F5DC;
+  --md-surface-container-lowest: #090F0F;
+  --md-surface-container-low: #1C2222;
+  --md-surface-container: #202727;
+  --md-surface-container-high: #2B3231;
+  --md-surface-container-highest: #363D3C;
+
+  /* Outline Colors */
+  --md-outline: #889390;
+  --md-outline-variant: #3F4946;
+
+  /* Legacy compatibility */
+  --bg: var(--md-surface);
+  --card: var(--md-surface-container);
+  --text: var(--md-on-surface);
+  --muted: var(--md-outline);
+  --primary: var(--md-primary);
+  --primary-600: #004940;
+  --border: var(--md-outline-variant);
+
+  /* Material Design Elevation Shadows */
+  --md-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --md-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --md-elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.3);
+  --md-elevation-4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.3);
+  --md-elevation-5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px 0px rgba(0, 0, 0, 0.3);
+
+  /* Material Design Motion */
+  --md-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-motion-duration-short1: 50ms;
+  --md-motion-duration-short2: 100ms;
+  --md-motion-duration-short3: 150ms;
+  --md-motion-duration-medium1: 250ms;
+  --md-motion-duration-medium2: 300ms;
+  --md-motion-duration-medium3: 350ms;
+  --md-motion-duration-medium4: 400ms;
+  --md-motion-duration-long1: 450ms;
+  --md-motion-duration-long2: 500ms;
+
+  /* Material Design Typography Scale */
+  --md-typescale-display-large-font: 'Inter', system-ui, sans-serif;
+  --md-typescale-display-large-line-height: 64px;
+  --md-typescale-display-large-size: 57px;
+  --md-typescale-display-large-weight: 400;
+
+  --md-typescale-headline-large-font: 'Inter', system-ui, sans-serif;
+  --md-typescale-headline-large-line-height: 40px;
+  --md-typescale-headline-large-size: 32px;
+  --md-typescale-headline-large-weight: 600;
+
+  --md-typescale-title-large-font: 'Inter', system-ui, sans-serif;
+  --md-typescale-title-large-line-height: 28px;
+  --md-typescale-title-large-size: 22px;
+  --md-typescale-title-large-weight: 600;
+
+  --md-typescale-body-large-font: 'Inter', system-ui, sans-serif;
+  --md-typescale-body-large-line-height: 24px;
+  --md-typescale-body-large-size: 16px;
+  --md-typescale-body-large-weight: 400;
+
+  --md-typescale-label-large-font: 'Inter', system-ui, sans-serif;
+  --md-typescale-label-large-line-height: 20px;
+  --md-typescale-label-large-size: 14px;
+  --md-typescale-label-large-weight: 500;
+}
+
+/* Base Styles */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--md-typescale-body-large-font);
+  font-size: var(--md-typescale-body-large-size);
+  line-height: var(--md-typescale-body-large-line-height);
+  font-weight: var(--md-typescale-body-large-weight);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  transition: all var(--md-motion-duration-medium2) var(--md-motion-easing-standard);
+}
+
+/* Material Design Surface Components */
+.md-surface {
+  background: var(--md-surface-container);
+  color: var(--md-on-surface);
+  border-radius: 12px;
+}
+
+.md-surface-1 {
+  background: var(--md-surface-container-low);
+  box-shadow: var(--md-elevation-1);
+}
+
+.md-surface-2 {
+  background: var(--md-surface-container);
+  box-shadow: var(--md-elevation-2);
+}
+
+.md-surface-3 {
+  background: var(--md-surface-container-high);
+  box-shadow: var(--md-elevation-3);
+}
+
+.md-surface-4 {
+  background: var(--md-surface-container-highest);
+  box-shadow: var(--md-elevation-4);
+}
+
+.md-surface-5 {
+  background: var(--md-surface-container-highest);
+  box-shadow: var(--md-elevation-5);
+}
+
+/* Material Design Cards */
+.card-surface, .md-card {
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--md-elevation-1);
+  transition: all var(--md-motion-duration-medium2) var(--md-motion-easing-standard);
+}
+
+.md-card:hover {
+  box-shadow: var(--md-elevation-2);
+  transform: translateY(-1px);
+}
+
+/* Material Design Button System */
+.md-button, .btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-family: var(--md-typescale-label-large-font);
+  font-size: var(--md-typescale-label-large-size);
+  font-weight: var(--md-typescale-label-large-weight);
+  line-height: var(--md-typescale-label-large-line-height);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  overflow: hidden;
+  transition: all var(--md-motion-duration-short3) var(--md-motion-easing-standard);
+  user-select: none;
+}
+
+/* Material Design Filled Button (Primary) */
+.md-button-filled, .btn-primary {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: var(--md-elevation-1);
+}
+
+.md-button-filled:hover, .btn-primary:hover {
+  background: var(--primary-600);
+  box-shadow: var(--md-elevation-2);
+  transform: translateY(-1px);
+}
+
+.md-button-filled:active, .btn-primary:active {
+  background: var(--primary-600);
+  box-shadow: var(--md-elevation-1);
+  transform: translateY(0px);
+}
+
+/* Material Design Outlined Button */
+.md-button-outlined, .btn {
+  background: transparent;
+  color: var(--md-primary);
+  border: 1px solid var(--md-outline);
+}
+
+.md-button-outlined:hover, .btn:hover {
+  background: rgba(0, 105, 92, 0.08);
+  border-color: var(--md-primary);
+}
+
+/* Material Design Text Button */
+.md-button-text {
+  background: transparent;
+  color: var(--md-primary);
+  padding: 10px 12px;
+  min-height: 40px;
+}
+
+.md-button-text:hover {
+  background: rgba(0, 105, 92, 0.08);
+}
+
+/* Ripple Effect */
+.md-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.md-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width var(--md-motion-duration-medium1) var(--md-motion-easing-emphasized),
+              height var(--md-motion-duration-medium1) var(--md-motion-easing-emphasized);
+}
+
+.md-ripple:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Material Design Form Components */
+.md-text-field, .input-base, .select-base, .textarea-base {
+  position: relative;
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 16px 8px 16px;
+  background: var(--md-surface-container-high);
+  border: 1px solid var(--md-outline);
+  border-radius: 4px;
+  color: var(--md-on-surface);
+  font-family: var(--md-typescale-body-large-font);
+  font-size: var(--md-typescale-body-large-size);
+  transition: all var(--md-motion-duration-short3) var(--md-motion-easing-standard);
+}
+
+.md-text-field:focus, .input-base:focus, .select-base:focus, .textarea-base:focus {
+  outline: none;
+  border-color: var(--md-primary);
+  border-width: 2px;
+  background: var(--md-surface-container-highest);
+}
+
+.md-text-field:hover, .input-base:hover, .select-base:hover, .textarea-base:hover {
+  border-color: var(--md-on-surface);
+  background: var(--md-surface-container-highest);
+}
+
+/* Material Design Navigation */
+.md-navigation-bar {
+  background: var(--md-surface-container);
+  border-bottom: 1px solid var(--md-outline-variant);
+  box-shadow: var(--md-elevation-2);
+}
+
+.md-navigation-item {
+  padding: 12px 16px;
+  color: #F5F5DC;
+  transition: all var(--md-motion-duration-short2) var(--md-motion-easing-standard);
+  border-radius: 8px;
+  margin: 4px;
+  font-weight: 500;
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container-low);
+}
+
+.md-navigation-item:hover {
+  background: var(--md-surface-container);
+  color: var(--md-primary);
+  border-color: var(--md-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--md-elevation-1);
+}
+
+.md-navigation-item.active {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+/* Material Design Modal/Dialog */
+.md-dialog, .md-modal {
+  background: var(--md-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: var(--md-elevation-3);
+  border: none;
+}
+
+.md-scrim {
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(4px);
+}
+
+/* Typography Classes */
+.md-display-large {
+  font-family: var(--md-typescale-display-large-font);
+  font-size: var(--md-typescale-display-large-size);
+  font-weight: var(--md-typescale-display-large-weight);
+  line-height: var(--md-typescale-display-large-line-height);
+}
+
+.md-headline-large {
+  font-family: var(--md-typescale-headline-large-font);
+  font-size: var(--md-typescale-headline-large-size);
+  font-weight: var(--md-typescale-headline-large-weight);
+  line-height: var(--md-typescale-headline-large-line-height);
+}
+
+.md-title-large {
+  font-family: var(--md-typescale-title-large-font);
+  font-size: var(--md-typescale-title-large-size);
+  font-weight: var(--md-typescale-title-large-weight);
+  line-height: var(--md-typescale-title-large-line-height);
+}
+
+.md-body-large {
+  font-family: var(--md-typescale-body-large-font);
+  font-size: var(--md-typescale-body-large-size);
+  font-weight: var(--md-typescale-body-large-weight);
+  line-height: var(--md-typescale-body-large-line-height);
+}
+
+.md-label-large {
+  font-family: var(--md-typescale-label-large-font);
+  font-size: var(--md-typescale-label-large-size);
+  font-weight: var(--md-typescale-label-large-weight);
+  line-height: var(--md-typescale-label-large-line-height);
+}
+
+/* Utility Classes */
+.muted { color: var(--md-outline); }
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Grid Cards */
+.grid-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .grid-cards {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+/* Animations */
+@keyframes md-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.md-fade-in, .fade-in {
+  animation: md-fade-in var(--md-motion-duration-medium2) var(--md-motion-easing-standard);
+}
+
+/* Loading States */
+.md-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--md-outline-variant);
+  border-top: 2px solid var(--md-primary);
+  border-radius: 50%;
+  animation: md-spin 1s linear infinite;
+}
+
+@keyframes md-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Focus Visible for Accessibility */
+.md-button:focus-visible,
+.md-text-field:focus-visible,
+.md-navigation-item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* Alumnos List Styles */
+.listado ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.listado li {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.listado .md-navigation-item {
+  margin: 0;
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  transition: all var(--md-motion-duration-short3) var(--md-motion-easing-standard);
+}
+
+.listado .md-navigation-item:hover {
+  background: var(--md-surface-container);
+  border-color: var(--md-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--md-elevation-1);
+}
