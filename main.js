@@ -121,6 +121,12 @@ setPersistence(auth, browserLocalPersistence);
 // Función para migrar reservas de localStorage a Firestore (solo se ejecuta una vez)
 window.migrateLocalReservationsToFirestore = async function migrateLocalReservationsToFirestore() {
   try {
+    // Verificar que Firebase esté inicializado
+    if (!db) {
+      console.warn('[migration] ⚠️ Firebase no está inicializado, saltando migración');
+      return;
+    }
+
     // Verificar si ya se migró anteriormente
     const migrationKey = 'golf_reservas_migrated_to_firestore';
     const localBookings = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
@@ -142,26 +148,34 @@ window.migrateLocalReservationsToFirestore = async function migrateLocalReservat
       console.log('[migration] 🔄 verificando si estas reservas ya existen en Firestore antes de re-migrar');
 
       // Verificar si las reservas locales ya existen en Firestore
-      const { collection: firestoreCollection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-      const querySnapshot = await getDocs(firestoreCollection(db, 'reservas'));
-      const existingIds = new Set();
-      querySnapshot.forEach((doc) => {
-        existingIds.add(doc.id);
-      });
+      try {
+        if (!db || !collection || !getDocs) {
+          console.warn('[migration] ⚠️ funciones de Firestore no disponibles, procediendo con migración normal');
+        } else {
+          const querySnapshot = await getDocs(collection(db, 'reservas'));
+          const existingIds = new Set();
+          querySnapshot.forEach((doc) => {
+            existingIds.add(doc.id);
+          });
 
-      // Filtrar solo las reservas que no existen en Firestore
-      const newLocalBookings = localBookings.filter(booking => !existingIds.has(booking.id));
+          // Filtrar solo las reservas que no existen en Firestore
+          const newLocalBookings = localBookings.filter(booking => !existingIds.has(booking.id));
 
-      if (newLocalBookings.length === 0) {
-        console.log('[migration] ✅ todas las reservas locales ya existen en Firestore, limpiando localStorage');
-        localStorage.removeItem('golf_reservas');
-        localStorage.setItem(migrationKey, 'true');
-        return;
-      } else {
-        console.log('[migration] 🔄 migrando solo', newLocalBookings.length, 'reservas nuevas');
-        // Actualizar localBookings para migrar solo las nuevas
-        localBookings.length = 0;
-        localBookings.push(...newLocalBookings);
+          if (newLocalBookings.length === 0) {
+            console.log('[migration] ✅ todas las reservas locales ya existen en Firestore, limpiando localStorage');
+            localStorage.removeItem('golf_reservas');
+            localStorage.setItem(migrationKey, 'true');
+            return;
+          } else {
+            console.log('[migration] 🔄 migrando solo', newLocalBookings.length, 'reservas nuevas');
+            // Actualizar localBookings para migrar solo las nuevas
+            localBookings.length = 0;
+            localBookings.push(...newLocalBookings);
+          }
+        }
+      } catch (verificationError) {
+        console.warn('[migration] ⚠️ error verificando reservas existentes:', verificationError.message);
+        console.log('[migration] 🔄 procediendo con migración normal como respaldo');
       }
     } else {
       console.log('[migration] 🔄 iniciando migración de localStorage a Firestore...');
@@ -2812,8 +2826,17 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     try {
       console.log('[reservas] cargando reservas desde Firestore...');
 
-      // NO migrar en actualizaciones manuales - solo leer desde Firestore
-      console.log('[reservas] omitiendo migración en actualización manual, solo leyendo desde Firestore');
+      // Limpiar localStorage de reservas obsoletas antes de cargar
+      try {
+        const localReservas = JSON.parse(localStorage.getItem('golf_reservas') || '[]');
+        if (localReservas.length > 0) {
+          console.log('[reservas] 🧹 limpiando reservas obsoletas de localStorage...');
+          localStorage.removeItem('golf_reservas');
+          localStorage.setItem('golf_reservas_migrated_to_firestore', 'true');
+        }
+      } catch (e) {
+        console.warn('[reservas] error limpiando localStorage:', e);
+      }
 
       // Obtener todas las reservas desde Firestore ordenadas por fecha y hora
       const reservasQuery = query(
@@ -2824,17 +2847,56 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
       const querySnapshot = await getDocs(reservasQuery);
 
       const reservas = [];
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        reservas.push({
-          ...data,
-          id: doc.id,
-          // Convertir timestamp de Firestore a string para compatibilidad
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt
-        });
+        const reservaDate = new Date(data.date);
+
+        // Solo incluir reservas de los últimos 6 meses
+        if (reservaDate >= sixMonthsAgo) {
+          reservas.push({
+            ...data,
+            id: doc.id,
+            // Convertir timestamp de Firestore a string para compatibilidad
+            createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt
+          });
+        } else {
+          console.log('[reservas] 🗑️ omitiendo reserva antigua:', data.date, data.studentName);
+        }
       });
 
-      console.log('[reservas] reservas encontradas en Firestore:', reservas.length);
+      console.log('[reservas] reservas encontradas en Firestore (últimos 6 meses):', reservas.length);
+
+      // Opcional: limpiar reservas muy antiguas de Firestore (más de 1 año)
+      if (isUserAdmin) {
+        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        const oldReservasToDelete = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const reservaDate = new Date(data.date);
+
+          if (reservaDate < oneYearAgo) {
+            oldReservasToDelete.push(doc.id);
+          }
+        });
+
+        if (oldReservasToDelete.length > 0) {
+          console.log('[reservas] 🗑️ encontradas', oldReservasToDelete.length, 'reservas muy antiguas para eliminar');
+
+          // Eliminar en lotes para evitar sobrecarga
+          for (const reservaId of oldReservasToDelete.slice(0, 5)) { // Solo 5 por vez
+            try {
+              await deleteDoc(doc(db, 'reservas', reservaId));
+              console.log('[reservas] ✅ eliminada reserva antigua:', reservaId);
+            } catch (deleteError) {
+              console.warn('[reservas] error eliminando reserva antigua:', reservaId, deleteError);
+            }
+          }
+        }
+      }
 
       // Limpiar lista actual
       reservasList.innerHTML = '';
