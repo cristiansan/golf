@@ -136,9 +136,33 @@ window.migrateLocalReservationsToFirestore = async function migrateLocalReservat
       return;
     }
 
-    // Si hay reservas locales pero la migración está marcada como completa, re-migrar
+    // Si hay reservas locales pero la migración está marcada como completa, verificar si realmente necesitamos migrar
     if (localStorage.getItem(migrationKey) === 'true' && localBookings.length > 0) {
-      console.log('[migration] 🔄 re-ejecutando migración - hay reservas locales pendientes');
+      console.log('[migration] ⚠️ advertencia: migración marcada como completa pero hay reservas locales');
+      console.log('[migration] 🔄 verificando si estas reservas ya existen en Firestore antes de re-migrar');
+
+      // Verificar si las reservas locales ya existen en Firestore
+      const { collection: firestoreCollection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      const querySnapshot = await getDocs(firestoreCollection(db, 'reservas'));
+      const existingIds = new Set();
+      querySnapshot.forEach((doc) => {
+        existingIds.add(doc.id);
+      });
+
+      // Filtrar solo las reservas que no existen en Firestore
+      const newLocalBookings = localBookings.filter(booking => !existingIds.has(booking.id));
+
+      if (newLocalBookings.length === 0) {
+        console.log('[migration] ✅ todas las reservas locales ya existen en Firestore, limpiando localStorage');
+        localStorage.removeItem('golf_reservas');
+        localStorage.setItem(migrationKey, 'true');
+        return;
+      } else {
+        console.log('[migration] 🔄 migrando solo', newLocalBookings.length, 'reservas nuevas');
+        // Actualizar localBookings para migrar solo las nuevas
+        localBookings.length = 0;
+        localBookings.push(...newLocalBookings);
+      }
     } else {
       console.log('[migration] 🔄 iniciando migración de localStorage a Firestore...');
     }
@@ -2788,12 +2812,8 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
     try {
       console.log('[reservas] cargando reservas desde Firestore...');
 
-      // Migrar reservas existentes de localStorage a Firestore (solo una vez)
-      if (typeof window.migrateLocalReservationsToFirestore === 'function') {
-        await window.migrateLocalReservationsToFirestore();
-      } else {
-        console.warn('[reservas] función migrateLocalReservationsToFirestore no disponible, continuando sin migración');
-      }
+      // NO migrar en actualizaciones manuales - solo leer desde Firestore
+      console.log('[reservas] omitiendo migración en actualización manual, solo leyendo desde Firestore');
 
       // Obtener todas las reservas desde Firestore ordenadas por fecha y hora
       const reservasQuery = query(
@@ -2967,6 +2987,13 @@ IMPORTANTE: Esta reserva se ha guardado localmente en tu dispositivo. Para cance
         if (reservasFiltradas.length !== reservas.length) {
           localStorage.setItem('golf_reservas', JSON.stringify(reservasFiltradas));
           console.log('[reservas] reserva también eliminada de localStorage');
+        }
+
+        // Si no quedan reservas en localStorage, limpiar completamente para evitar re-migraciones
+        if (reservasFiltradas.length === 0) {
+          localStorage.removeItem('golf_reservas');
+          localStorage.setItem('golf_reservas_migrated_to_firestore', 'true');
+          console.log('[reservas] localStorage limpiado completamente - no hay reservas locales');
         }
       } catch (localError) {
         console.warn('[reservas] error eliminando de localStorage:', localError);
